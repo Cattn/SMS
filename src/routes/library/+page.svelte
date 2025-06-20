@@ -53,7 +53,7 @@
     {#if imageFiles.length > 0}
         <section class="mb-8 mr-10">
             <h2 class="text-2xl font-semibold mb-4">Images</h2>
-            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-4">
                 {#each imageFiles as file}
                     <div class="border rounded-lg p-4 shadow-sm">
                         {#if file.shouldShowLoadButton}
