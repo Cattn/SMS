@@ -83,7 +83,7 @@
     {/if}
 
     {#if nonImageFiles.length > 0}
-        <section class="mr-10">
+        <section class="mr-10 mb-20">
             <h2 class="text-2xl font-semibold mb-4">Files</h2>
             <div class="space-y-2">
                 {#each nonImageFiles as file}
