@@ -12,6 +12,7 @@
     const MAX_SIZE_BYTES = 5 * 1024 * 1024; // 5MB
     
     const isImageFile = (filename: string) => {
+        if (!filename) return false;
         const ext = filename.toLowerCase().substring(filename.lastIndexOf('.'));
         return imageExtensions.includes(ext);
     };
@@ -22,18 +23,19 @@
     };
 
     let processedFiles = $derived(files.map((file: any) => {
-        const isImage = isImageFile(file.name);
+        const fileName = file.name || '';
+        const isImage = isImageFile(fileName);
         const isLargeImage = isImage && file.size > MAX_SIZE_BYTES;
-        const shouldShowLoadButton = isLargeImage && !loadedImages.has(file.name);
+        const shouldShowLoadButton = isLargeImage && !loadedImages.has(fileName);
         
         return {
-            name: file.name,
+            name: fileName,
             size: file.size,
             isImage,
             isLargeImage,
             shouldShowLoadButton,
-            url: page.url.protocol + '//' + page.url.hostname + ':5823/api/getFile/' + file.name,
-            extension: file.name.substring(file.name.lastIndexOf('.') + 1).toUpperCase()
+            url: page.url.protocol + '//' + page.url.hostname + ':5823/api/getFile/' + fileName,
+            extension: fileName ? fileName.substring(fileName.lastIndexOf('.') + 1).toUpperCase() : ''
         }
     }));
 
@@ -88,11 +90,11 @@
             <div class="space-y-2">
                 {#each nonImageFiles as file}
                     <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-primary-container">
-                        <div class="flex items-center space-x-3">
+                        <div class="flex items-center space-x-1 flex-1 min-w-0">
                             <div class="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
                                 <span class="text-xs font-medium text-blue-600">{file.extension}</span>
                             </div>
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <span class="font-medium block truncate">{file.name}</span>
                                 <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
                             </div>
