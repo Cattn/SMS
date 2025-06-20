@@ -1,0 +1,1 @@
+{"version":3,"file":"errorHandker.d.ts","sourceRoot":"","sources":["../../src/middleware/errorHandker.ts"],"names":[],"mappings":"AAAA,OAAO,EAAE,OAAO,EAAE,QAAQ,EAAE,MAAM,SAAS,CAAC;AAE5C,MAAM,WAAW,QAAS,SAAQ,KAAK;IACrC,MAAM,CAAC,EAAE,MAAM,CAAC;CACjB;AAED,eAAO,MAAM,YAAY,GACvB,KAAK,QAAQ,EACb,KAAK,OAAO,EACZ,KAAK,QAAQ,SAKd,CAAC"}

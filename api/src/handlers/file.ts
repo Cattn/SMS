@@ -1,14 +1,14 @@
-import { Request, Response, NextFunction } from 'express';
+import { Request, Response } from 'express';
 import { UploadedFile } from 'express-fileupload';
 import path from 'path';
 
-export const uploadFile = async (req: Request, res: Response, next: NextFunction): Promise<void> => {
+export const uploadFile = async (req: Request, res: Response): Promise<void> => {
     if (!req.files || Object.keys(req.files).length === 0) {
         res.status(400).send('No files were uploaded.');
         return;
     }
     const file = req.files.file as UploadedFile;
-    const uploadPath = path.join(__dirname, '../uploads', file.name);
+    const uploadPath = path.join(process.cwd(), '../uploads', file.name);
 
     file.mv(uploadPath, (err) => {
         if (err) {
