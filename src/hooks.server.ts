@@ -15,14 +15,17 @@ const csrf = (
         request.method === "DELETE";
     const isOriginAllowed = allowedOrigins.includes(origin);
 
-    console.log('CSRF Check:', {
-        origin,
-        method: request.method,
-        isFormContent,
-        isMutatingMethod,
-        isOriginAllowed,
-        allowedOrigins: allowedOrigins.slice(0, 5) // Log first 5 for reference
-    });
+    if (request.method === 'POST') {
+        console.log('POST Request CSRF Check:', {
+            origin,
+            method: request.method,
+            isFormContent,
+            isMutatingMethod,
+            isOriginAllowed,
+            contentType: request.headers.get("content-type"),
+            allHeaders: Object.fromEntries(request.headers.entries())
+        });
+    }
 
     const forbidden = isFormContent && isMutatingMethod && !isOriginAllowed;
 
