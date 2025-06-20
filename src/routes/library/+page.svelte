@@ -93,7 +93,7 @@
                                 <span class="text-xs font-medium text-blue-600">{file.extension}</span>
                             </div>
                             <div>
-                                <span class="font-medium block">{file.name}</span>
+                                <span class="font-medium block truncate">{file.name}</span>
                                 <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
                             </div>
                         </div>
