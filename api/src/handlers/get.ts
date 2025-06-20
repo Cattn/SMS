@@ -6,7 +6,17 @@ export const getFiles = async (req: Request, res: Response): Promise<void> => {
     try {
         const uploadsDir = path.join(process.cwd(), '../uploads');
         const files = fs.readdirSync(uploadsDir);
-        res.json({ files });
+        
+        const filesWithSizes = files.map(filename => {
+            const filePath = path.join(uploadsDir, filename);
+            const stats = fs.statSync(filePath);
+            return {
+                name: filename,
+                size: stats.size
+            };
+        });
+        
+        res.json({ files: filesWithSizes });
     } catch {
         res.status(500).json({ error: 'Unable to read uploads directory' });
     }
