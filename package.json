@@ -15,7 +15,8 @@
 		"build:api": "cd api && npx webpack",
 		"start:api": "cd api && node dist/server.cjs",
 		"dev:api": "npm run build:api && npm run start:api",
-		"startall": "npm run build && node server.js && npm run start:api"
+		"start": "npm run build && node server.js",
+		"startall": "concurrently \"npm run start\" \"npm run dev:api\""
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
@@ -24,6 +25,7 @@
 		"@sveltejs/kit": "^2.16.0",
 		"@sveltejs/vite-plugin-svelte": "^5.0.0",
 		"@tailwindcss/vite": "^4.0.0",
+		"concurrently": "^9.1.2",
 		"eslint": "^9.18.0",
 		"eslint-config-prettier": "^10.0.1",
 		"eslint-plugin-svelte": "^3.0.0",
