@@ -66,7 +66,7 @@
                                     Load Image
                                 </Button>
                             </div>
-                        {:else}
+                        {:else} 
                             <img 
                                 src={file.url} 
                                 alt={file.name} 

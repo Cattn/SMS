@@ -6,6 +6,9 @@ export const actions = {
         const formData = await event.request.formData();
         const response = await fetch('http://' + event.url.hostname + ':5823/api/upload', {
             method: 'POST',
+            headers: {
+                'Content-Type': 'multipart/form-data'
+            },
             body: formData
         });
         const data = await response.json();
