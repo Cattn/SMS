@@ -6,13 +6,24 @@ export const actions = {
         const formData = await event.request.formData();
         const response = await fetch('http://' + event.url.hostname + ':5823/api/upload', {
             method: 'POST',
-            headers: {
-                'Content-Type': 'multipart/form-data'
-            },
             body: formData
         });
-        const data = await response.json();
+        
+        if (!response.ok) {
+            const errorText = await response.text();
+            console.error('Upload failed:', errorText);
+            return { success: false, error: errorText };
+        }
+        
+        const contentType = response.headers.get('content-type');
+        let data;
+        if (contentType && contentType.includes('application/json')) {
+            data = await response.json();
+        } else {
+            data = { message: await response.text() };
+        }
+        
         console.log(data);
-        return { success: true };
+        return { success: true, data };
     }
 } satisfies Actions;
