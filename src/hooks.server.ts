@@ -6,16 +6,28 @@ const csrf = (
     allowedOrigins: string[],
 ) => {
     const { request } = event;
+    
+    const origin = request.headers.get("origin") || "";
+    const isFormContent = isFormContentType(request);
+    const isMutatingMethod = request.method === "POST" ||
+        request.method === "PUT" ||
+        request.method === "PATCH" ||
+        request.method === "DELETE";
+    const isOriginAllowed = allowedOrigins.includes(origin);
 
-    const forbidden =
-        isFormContentType(request) &&
-        (request.method === "POST" ||
-            request.method === "PUT" ||
-            request.method === "PATCH" ||
-            request.method === "DELETE") &&
-        !allowedOrigins.includes(request.headers.get("origin") || "");
+    console.log('CSRF Check:', {
+        origin,
+        method: request.method,
+        isFormContent,
+        isMutatingMethod,
+        isOriginAllowed,
+        allowedOrigins: allowedOrigins.slice(0, 5) // Log first 5 for reference
+    });
+
+    const forbidden = isFormContent && isMutatingMethod && !isOriginAllowed;
 
     if (forbidden) {
+        console.log(`CSRF blocked: origin "${origin}" not in allowed origins`);
         error(403, `Cross-site ${request.method} form submissions are forbidden`);
     }
 };
