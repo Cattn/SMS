@@ -10,18 +10,23 @@ export const uploadFile = (req: Request, res: Response): void => {
     const totalSizeHeader = parseInt(req.headers['content-length'] || '0', 10);
     let totalBytesReceived = 0;
     let uploadToken = '';
-    let pendingProgressUpdates: number[] = [];
+    let lastProgressUpdate = 0;
+    let lastProgressTime = 0;
     
     req.on('data', (chunk: Buffer) => {
         totalBytesReceived += chunk.length;
         if (totalSizeHeader > 0) {
             const percent = Math.min(99, Math.floor((totalBytesReceived / totalSizeHeader) * 100));
-            console.log(`Raw request progress: ${percent}% (${totalBytesReceived}/${totalSizeHeader} bytes)`);
+            const now = Date.now();
             
-            if (uploadToken) {
-                progressStore.setProgress(uploadToken, percent);
-            } else {
-                pendingProgressUpdates.push(percent);
+            if (percent !== lastProgressUpdate && (now - lastProgressTime > 100 || percent - lastProgressUpdate >= 1)) {
+                console.log(`Raw request progress: ${percent}% (${totalBytesReceived}/${totalSizeHeader} bytes)`);
+                lastProgressUpdate = percent;
+                lastProgressTime = now;
+                
+                if (uploadToken) {
+                    progressStore.setProgress(uploadToken, percent);
+                }
             }
         }
     });
@@ -41,13 +46,8 @@ export const uploadFile = (req: Request, res: Response): void => {
         console.log(`Field received: ${fieldname} = ${val}`);
         if (fieldname === 'uploadToken') {
             uploadToken = val;
-            if (pendingProgressUpdates.length > 0) {
-                const latestProgress = pendingProgressUpdates[pendingProgressUpdates.length - 1];
-                progressStore.setProgress(uploadToken, latestProgress);
-                pendingProgressUpdates = [];
-            } else {
-                progressStore.setProgress(uploadToken, 1);
-            }
+            const currentPercent = totalSizeHeader > 0 ? Math.min(99, Math.floor((totalBytesReceived / totalSizeHeader) * 100)) : 1;
+            progressStore.setProgress(uploadToken, Math.max(currentPercent, 1));
         }
     });
 
