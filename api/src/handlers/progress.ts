@@ -27,46 +27,18 @@ export const getUploadProgress = (req: Request, res: Response): void => {
         res.write(`data: ${JSON.stringify(initialProgress)}\n\n`);
     }
 
-    let notFoundCount = 0;
-    const maxNotFoundAttempts = 3600; 
-    let gracePeroidRemaining = 240; 
-
-    let lastProgress = initialProgress?.progress ?? 0;
-
-    const progressInterval = setInterval(() => {
-        const progress = progressStore.getProgress(token);
-        
-        if (!progress) {
-            if (gracePeroidRemaining > 0) {
-                gracePeroidRemaining--;
-                return;
-            }
-            
-            notFoundCount++;
-            if (notFoundCount >= maxNotFoundAttempts) {
-                res.write(`data: ${JSON.stringify({ progress: -1, error: 'Upload not found' })}\n\n`);
-                clearInterval(progressInterval);
-                res.end();
-            }
-            return;
-        }
-
-        notFoundCount = 0;
-        gracePeroidRemaining = 0;
-
-        if (progress.progress !== lastProgress) {
-            lastProgress = progress.progress;
-            res.write(`data: ${JSON.stringify(progress)}\n\n`);
-        }
-
+    const progressCallback = (progress: { progress: number }) => {
+        res.write(`data: ${JSON.stringify(progress)}\n\n`);
         if (progress.progress >= 100 || progress.progress < 0) {
-            clearInterval(progressInterval);
+            progressStore.unsubscribe(token, progressCallback);
             res.end();
         }
-    }, 250);
+    };
+
+    progressStore.subscribe(token, progressCallback);
 
     req.on('close', () => {
-        clearInterval(progressInterval);
+        progressStore.unsubscribe(token, progressCallback);
         res.end();
     });
 }; 
