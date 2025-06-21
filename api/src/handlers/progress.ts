@@ -23,12 +23,18 @@ export const getUploadProgress = (req: Request, res: Response): void => {
     }
 
     let notFoundCount = 0;
-    const maxNotFoundAttempts = 40;
+    const maxNotFoundAttempts = 120;
+    let gracePeroidRemaining = 20;
 
     const progressInterval = setInterval(() => {
         const progress = progressStore.getProgress(token);
         
         if (!progress) {
+            if (gracePeroidRemaining > 0) {
+                gracePeroidRemaining--;
+                return;
+            }
+            
             notFoundCount++;
             if (notFoundCount >= maxNotFoundAttempts) {
                 res.write(`data: ${JSON.stringify({ progress: -1, error: 'Upload not found' })}\n\n`);
@@ -39,6 +45,7 @@ export const getUploadProgress = (req: Request, res: Response): void => {
         }
 
         notFoundCount = 0;
+        gracePeroidRemaining = 0;
         res.write(`data: ${JSON.stringify(progress)}\n\n`);
 
         if (progress.progress >= 100 || progress.progress < 0) {
