@@ -1,10 +1,12 @@
 <script lang="ts">
     import type { PageProps } from './$types';
     import { page } from '$app/state';
-    import { Button } from 'm3-svelte';
+    import { Button, Snackbar } from 'm3-svelte';
     import { config } from '$lib/config';
     
     let { data }: PageProps = $props();
+
+    let snackbar: ReturnType<typeof Snackbar>;
 
     let files = $derived(data.files.files);
     let loadedImages = $state(new Set<string>());
@@ -58,6 +60,7 @@
 
     async function copyToClipboard(fileName: string) {
         const link = getLink(fileName);
+        snackbar.show({message: 'Link copied to clipboard!', closable: true });
         
         try {
             if (!navigator.clipboard) {
@@ -173,6 +176,8 @@
         <p class="text-gray-500">No files uploaded yet.</p>
     {/if}
 </div>
+
+<Snackbar bind:this={snackbar} />
 
 <style>
     .hover-bg-secondary-container:hover {
