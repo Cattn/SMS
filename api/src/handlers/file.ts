@@ -9,6 +9,7 @@ export const uploadFile = (req: Request, res: Response): void => {
 
     let uploadToken = '';
     let filename = '';
+    let totalSize = 0;
     const uploadsDir = path.join(process.cwd(), '../uploads');
     if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -22,6 +23,9 @@ export const uploadFile = (req: Request, res: Response): void => {
             uploadToken = val;
             progressStore.setProgress(uploadToken, 1);
         }
+        if (fieldname === 'fileSize') {
+            totalSize = parseInt(val, 10);
+        }
     });
 
     busboy.on('file', (fieldname, file, info) => {
@@ -31,8 +35,9 @@ export const uploadFile = (req: Request, res: Response): void => {
 
         file.on('data', (data: Buffer) => {
             bytesReceived += data.length;
-            if (uploadToken && totalSizeHeader) {
-                const percent = Math.min(99, Math.floor((bytesReceived / totalSizeHeader) * 100));
+            const refSize = totalSize || totalSizeHeader;
+            if (uploadToken && refSize) {
+                const percent = Math.min(99, Math.floor((bytesReceived / refSize) * 100));
                 progressStore.setProgress(uploadToken, percent, filename);
             }
         });

@@ -83,6 +83,9 @@
         use:enhance={({ formData }) => {
             uploadToken = generateUploadToken();
             formData.set('uploadToken', uploadToken);
+            if (files && files.length > 0) {
+                formData.set('fileSize', files[0].size.toString());
+            }
             startProgressTracking(uploadToken);
             
             return ({ result, update }) => {
