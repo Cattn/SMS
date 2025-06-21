@@ -91,23 +91,26 @@
 
             cancel();
 
-            fetch(`http://${window.location.hostname}:5823/api/upload`, {
-                method: 'POST',
-                body: formData
-            }).then(async (response) => {
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Upload failed:', errorText);
+            const xhr = new XMLHttpRequest();
+            xhr.open('POST', `http://${window.location.hostname}:5823/api/upload`);
+            
+            xhr.onload = () => {
+                if (xhr.status !== 200) {
+                    console.error('Upload failed:', xhr.responseText);
                     isUploading = false;
                     progressEventSource?.close();
                     progressEventSource = null;
                 }
-            }).catch((err) => {
-                console.error('Upload error:', err);
+            };
+            
+            xhr.onerror = () => {
+                console.error('Upload error');
                 isUploading = false;
                 progressEventSource?.close();
                 progressEventSource = null;
-            });
+            };
+            
+            xhr.send(formData);
         }}
     >
 

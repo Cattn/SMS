@@ -5,7 +5,11 @@ import fs from 'fs';
 import Busboy from 'busboy';
 
 export const uploadFile = (req: Request, res: Response): void => {
-    const busboy = Busboy({ headers: req.headers });
+    console.log('Upload started, content-length:', req.headers['content-length']);
+    const busboy = Busboy({ 
+        headers: req.headers,
+        highWaterMark: 16 * 1024
+    });
 
     let uploadToken = '';
     let filename = '';
@@ -19,6 +23,7 @@ export const uploadFile = (req: Request, res: Response): void => {
     let bytesReceived = 0;
 
     busboy.on('field', (fieldname, val) => {
+        console.log(`Field received: ${fieldname} = ${val}`);
         if (fieldname === 'uploadToken') {
             uploadToken = val;
             progressStore.setProgress(uploadToken, 1);
@@ -29,6 +34,7 @@ export const uploadFile = (req: Request, res: Response): void => {
     });
 
     busboy.on('file', (fieldname, file, info) => {
+        console.log(`File stream started: ${info.filename}`);
         filename = info.filename || 'uploaded_file';
         const uploadPath = path.join(uploadsDir, filename);
         const writeStream = fs.createWriteStream(uploadPath);
@@ -44,6 +50,7 @@ export const uploadFile = (req: Request, res: Response): void => {
         });
 
         file.on('end', () => {
+            console.log('File stream ended');
             if (uploadToken) {
                 progressStore.setProgress(uploadToken, 99, filename);
             }
