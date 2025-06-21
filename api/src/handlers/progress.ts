@@ -17,14 +17,19 @@ export const getUploadProgress = (req: Request, res: Response): void => {
         'Access-Control-Allow-Headers': 'Cache-Control'
     });
 
-    const initialProgress = progressStore.getProgress(token);
+    let initialProgress = progressStore.getProgress(token);
+    if (!initialProgress) {
+        progressStore.setProgress(token, 1);
+        initialProgress = progressStore.getProgress(token);
+    }
+
     if (initialProgress) {
         res.write(`data: ${JSON.stringify(initialProgress)}\n\n`);
     }
 
     let notFoundCount = 0;
-    const maxNotFoundAttempts = 120;
-    let gracePeroidRemaining = 20;
+    const maxNotFoundAttempts = 3600; 
+    let gracePeroidRemaining = 240; 
 
     const progressInterval = setInterval(() => {
         const progress = progressStore.getProgress(token);
