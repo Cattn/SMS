@@ -80,23 +80,34 @@
         enctype="multipart/form-data" 
         method="POST" 
         class="button-mod justify-center items-center flex flex-col w-full max-w-md md:max-w-lg" 
-        use:enhance={({ formData }) => {
+        use:enhance={( { formData, cancel } ) => {
             uploadToken = generateUploadToken();
             formData.set('uploadToken', uploadToken);
             if (files && files.length > 0) {
                 formData.set('fileSize', files[0].size.toString());
             }
+
             startProgressTracking(uploadToken);
-            
-            return ({ result, update }) => {
-                if (result.type === 'failure') {
+
+            cancel();
+
+            fetch(`http://${window.location.hostname}:5823/api/upload`, {
+                method: 'POST',
+                body: formData
+            }).then(async (response) => {
+                if (!response.ok) {
+                    const errorText = await response.text();
+                    console.error('Upload failed:', errorText);
                     isUploading = false;
                     progressEventSource?.close();
                     progressEventSource = null;
                 }
-                
-                update();
-            };
+            }).catch((err) => {
+                console.error('Upload error:', err);
+                isUploading = false;
+                progressEventSource?.close();
+                progressEventSource = null;
+            });
         }}
     >
 
