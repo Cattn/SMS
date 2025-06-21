@@ -82,14 +82,17 @@
         class="button-mod justify-center items-center flex flex-col w-full max-w-md md:max-w-lg" 
         use:enhance={( { formData, cancel } ) => {
             uploadToken = generateUploadToken();
-            formData.set('uploadToken', uploadToken);
-            if (files && files.length > 0) {
-                formData.set('fileSize', files[0].size.toString());
-            }
 
             startProgressTracking(uploadToken);
 
             cancel();
+
+            const uploadFormData = new FormData();
+            uploadFormData.append('uploadToken', uploadToken);
+            if (files && files.length > 0) {
+                uploadFormData.append('fileSize', files[0].size.toString());
+                uploadFormData.append('file', files[0]);
+            }
 
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `http://${window.location.hostname}:5823/api/upload`);
@@ -110,7 +113,7 @@
                 progressEventSource = null;
             };
             
-            xhr.send(formData);
+            xhr.send(uploadFormData);
         }}
     >
 
