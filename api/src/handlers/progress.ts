@@ -31,6 +31,8 @@ export const getUploadProgress = (req: Request, res: Response): void => {
     const maxNotFoundAttempts = 3600; 
     let gracePeroidRemaining = 240; 
 
+    let lastProgress = initialProgress?.progress ?? 0;
+
     const progressInterval = setInterval(() => {
         const progress = progressStore.getProgress(token);
         
@@ -51,7 +53,11 @@ export const getUploadProgress = (req: Request, res: Response): void => {
 
         notFoundCount = 0;
         gracePeroidRemaining = 0;
-        res.write(`data: ${JSON.stringify(progress)}\n\n`);
+
+        if (progress.progress !== lastProgress) {
+            lastProgress = progress.progress;
+            res.write(`data: ${JSON.stringify(progress)}\n\n`);
+        }
 
         if (progress.progress >= 100 || progress.progress < 0) {
             clearInterval(progressInterval);
