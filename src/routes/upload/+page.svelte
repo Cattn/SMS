@@ -13,13 +13,13 @@
             <br>
             {#if selectedFileName}
                 <p class="mt-2 text-center text-lg text-on-primary">Selected: {selectedFileName}</p>
-            {/if}
+            {/if} 
         </label>
         <Button square variant="filled" type="submit">Upload</Button>
     </form>
-</div>
+</div> 
 
-<style>
+<style> 
     .button-mod :global(button) {
         margin-top: 20px;
         justify-content: center;

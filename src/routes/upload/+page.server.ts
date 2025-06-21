@@ -11,9 +11,9 @@ export const actions = {
         
         if (!response.ok) {
             const errorText = await response.text();
-            console.error('Upload failed:', errorText);
+            console.error('Upload failed:', errorText); 
             return { success: false, error: errorText };
-        }
+        } 
         
         const contentType = response.headers.get('content-type');
         let data;

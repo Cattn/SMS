@@ -2,7 +2,8 @@
     import type { PageProps } from './$types';
     import { page } from '$app/state';
     import { Button } from 'm3-svelte';
-
+    import { config } from '$lib/config';
+    
     let { data }: PageProps = $props();
 
     let files = $derived(data.files.files);
@@ -47,6 +48,39 @@
         if (bytes < 1024 * 1024) return (bytes / 1024).toFixed(1) + ' KB';
         return (bytes / (1024 * 1024)).toFixed(1) + ' MB';
     };
+
+    let hoveredImage = $state<string | null>(null);
+    let copiedFile = $state<string | null>(null);
+
+    function getLink(fileName: string) {
+        return config.domain + '/SMS/uploads/' + fileName;
+    }
+
+    async function copyToClipboard(fileName: string) {
+        const link = getLink(fileName);
+        
+        try {
+            if (!navigator.clipboard) {
+                // Fallback for browsers that don't support clipboard API
+                const textArea = document.createElement('textarea');
+                textArea.value = link;
+                document.body.appendChild(textArea);
+                textArea.select();
+                document.execCommand('copy');
+                document.body.removeChild(textArea);
+            } else {
+                await navigator.clipboard.writeText(link);
+            }
+            
+            copiedFile = fileName;
+            setTimeout(() => {
+                copiedFile = null;
+            }, 2000);
+        } catch (err) {
+            console.error('Failed to copy link:', err);
+            alert('Failed to copy link. Please try again.');
+        }
+    }
 </script>
 
 <div class="mt-12 ml-32">
@@ -69,12 +103,38 @@
                                 </Button>
                             </div>
                         {:else} 
-                            <img 
-                                src={file.url} 
-                                alt={file.name} 
-                                class="w-full object-fit rounded mb-2"
-                                loading="lazy"
-                            />
+                            <!-- svelte-ignore a11y_no_static_element_interactions -->
+                            <div 
+                                class="relative"
+                                onmouseenter={() => hoveredImage = file.name}
+                                onmouseleave={() => hoveredImage = null}
+                            >
+                                {#if hoveredImage === file.name || copiedFile === file.name}
+                                    <button 
+                                        onclick={() => copyToClipboard(file.name)} 
+                                        class="absolute inset-0 flex flex-col items-center justify-center rounded cursor-pointer z-50 border-0 transition-all"
+                                        style="background-color: rgba(0, 0, 0, 0.5);"
+                                    >
+                                        {#if copiedFile === file.name}
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-green-400 mb-2">
+                                                <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                                            </svg>
+                                            <span class="text-tertiary text-sm font-medium">Copied!</span>
+                                        {:else}
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-tertiary mb-2">
+                                                <path fill="currentColor" d="M17 7h-3c-.55 0-1 .45-1 1s.45 1 1 1h3c1.65 0 3 1.35 3 3s-1.35 3-3 3h-3c-.55 0-1 .45-1 1s.45 1 1 1h3c2.76 0 5-2.24 5-5s-2.24-5-5-5m-9 5c0 .55.45 1 1 1h6c.55 0 1-.45 1-1s-.45-1-1-1H9c-.55 0-1 .45-1 1m2 3H7c-1.65 0-3-1.35-3-3s1.35-3 3-3h3c.55 0 1-.45 1-1s-.45-1-1-1H7c-2.76 0-5 2.24-5 5s2.24 5 5 5h3c.55 0 1-.45 1-1s-.45-1-1-1" />
+                                            </svg>
+                                            <span class="text-tertiary text-sm font-medium">Copy Link</span>
+                                        {/if}
+                                    </button>
+                                {/if}
+                                <img 
+                                    src={file.url} 
+                                    alt={file.name} 
+                                    class="w-full object-fit rounded mb-2"
+                                    loading="lazy"
+                                />
+                            </div>
                         {/if}
                         <p class="text-sm text-gray-600 truncate">{file.name}</p>
                         <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
@@ -89,17 +149,20 @@
             <h2 class="text-2xl font-semibold mb-4">Files</h2>
             <div class="space-y-2">
                 {#each nonImageFiles as file}
-                    <div class="flex items-center justify-between p-3 border rounded-lg hover:bg-primary-container">
+                    <div class="flex flex-col md:flex-row md:items-center md:justify-between p-3 border rounded-lg hover-bg-secondary-container gap-3">
                         <div class="flex items-center space-x-1 flex-1 min-w-0">
                             <div class="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
-                                <span class="text-xs font-medium text-blue-600">{file.extension}</span>
+                                <span class="text-xs font-medium text-blue-600">{file.extension}</span> 
                             </div>
-                            <div class="flex-1 min-w-0">
+                            <div class="flex-1 min-w-0 ml-1"> 
                                 <span class="font-medium block truncate">{file.name}</span>
                                 <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
                             </div>
                         </div>
-                        <Button variant="tonal" href={file.url} download={file.name}>Download</Button>
+                        <div class="flex gap-2">
+                            <Button variant="outlined" onclick={() => copyToClipboard(file.name)}>Copy Link</Button>
+                            <Button variant="tonal" href={file.url} download={file.name}>Download</Button>
+                        </div>
                     </div>
                 {/each}
             </div>
@@ -110,3 +173,9 @@
         <p class="text-gray-500">No files uploaded yet.</p>
     {/if}
 </div>
+
+<style>
+    .hover-bg-secondary-container:hover {
+        background-color: rgb(var(--m3-scheme-primary, 0 123 255) / 0.05) !important;
+    }
+</style>
