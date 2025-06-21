@@ -38,6 +38,7 @@ export const uploadFile = (req: Request, res: Response): void => {
             const refSize = totalSize || totalSizeHeader;
             if (uploadToken && refSize) {
                 const percent = Math.min(99, Math.floor((bytesReceived / refSize) * 100));
+                console.log(`Progress update: ${percent}% (${bytesReceived}/${refSize} bytes)`);
                 progressStore.setProgress(uploadToken, percent, filename);
             }
         });

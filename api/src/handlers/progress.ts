@@ -28,6 +28,7 @@ export const getUploadProgress = (req: Request, res: Response): void => {
     }
 
     const progressCallback = (progress: { progress: number }) => {
+        console.log(`Sending SSE progress update: ${progress.progress}%`);
         res.write(`data: ${JSON.stringify(progress)}\n\n`);
         if (progress.progress >= 100 || progress.progress < 0) {
             progressStore.unsubscribe(token, progressCallback);
