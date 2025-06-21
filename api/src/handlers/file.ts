@@ -6,30 +6,48 @@ import Busboy from 'busboy';
 
 export const uploadFile = (req: Request, res: Response): void => {
     console.log('Upload started, content-length:', req.headers['content-length']);
+    
+    const totalSizeHeader = parseInt(req.headers['content-length'] || '0', 10);
+    let totalBytesReceived = 0;
+    let uploadToken = '';
+    let pendingProgressUpdates: number[] = [];
+    
+    req.on('data', (chunk: Buffer) => {
+        totalBytesReceived += chunk.length;
+        if (totalSizeHeader > 0) {
+            const percent = Math.min(99, Math.floor((totalBytesReceived / totalSizeHeader) * 100));
+            console.log(`Raw request progress: ${percent}% (${totalBytesReceived}/${totalSizeHeader} bytes)`);
+            
+            if (uploadToken) {
+                progressStore.setProgress(uploadToken, percent);
+            } else {
+                pendingProgressUpdates.push(percent);
+            }
+        }
+    });
+    
     const busboy = Busboy({ 
         headers: req.headers,
-        highWaterMark: 16 * 1024
+        highWaterMark: 16 * 1024,
     });
 
-    let uploadToken = '';
     let filename = '';
-    let totalSize = 0;
     const uploadsDir = path.join(process.cwd(), '../uploads');
     if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
     }
 
-    const totalSizeHeader = parseInt(req.headers['content-length'] || '0', 10);
-    let bytesReceived = 0;
-
     busboy.on('field', (fieldname, val) => {
         console.log(`Field received: ${fieldname} = ${val}`);
         if (fieldname === 'uploadToken') {
             uploadToken = val;
-            progressStore.setProgress(uploadToken, 1);
-        }
-        if (fieldname === 'fileSize') {
-            totalSize = parseInt(val, 10);
+            if (pendingProgressUpdates.length > 0) {
+                const latestProgress = pendingProgressUpdates[pendingProgressUpdates.length - 1];
+                progressStore.setProgress(uploadToken, latestProgress);
+                pendingProgressUpdates = [];
+            } else {
+                progressStore.setProgress(uploadToken, 1);
+            }
         }
     });
 
@@ -38,16 +56,6 @@ export const uploadFile = (req: Request, res: Response): void => {
         filename = info.filename || 'uploaded_file';
         const uploadPath = path.join(uploadsDir, filename);
         const writeStream = fs.createWriteStream(uploadPath);
-
-        file.on('data', (data: Buffer) => {
-            bytesReceived += data.length;
-            const refSize = totalSize || totalSizeHeader;
-            if (uploadToken && refSize) {
-                const percent = Math.min(99, Math.floor((bytesReceived / refSize) * 100));
-                console.log(`Progress update: ${percent}% (${bytesReceived}/${refSize} bytes)`);
-                progressStore.setProgress(uploadToken, percent, filename);
-            }
-        });
 
         file.on('end', () => {
             console.log('File stream ended');
