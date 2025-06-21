@@ -5,8 +5,6 @@ import fs from 'fs';
 import Busboy from 'busboy';
 
 export const uploadFile = (req: Request, res: Response): void => {
-    console.log('Upload started, content-length:', req.headers['content-length']);
-    
     const totalSizeHeader = parseInt(req.headers['content-length'] || '0', 10);
     let totalBytesReceived = 0;
     let uploadToken = '';
@@ -19,8 +17,7 @@ export const uploadFile = (req: Request, res: Response): void => {
             const percent = Math.min(99, Math.floor((totalBytesReceived / totalSizeHeader) * 100));
             const now = Date.now();
             
-            if (percent !== lastProgressUpdate && (now - lastProgressTime > 100 || percent - lastProgressUpdate >= 1)) {
-                console.log(`Raw request progress: ${percent}% (${totalBytesReceived}/${totalSizeHeader} bytes)`);
+            if (percent !== lastProgressUpdate && (now - lastProgressTime > 500 || percent - lastProgressUpdate >= 5)) {
                 lastProgressUpdate = percent;
                 lastProgressTime = now;
                 
@@ -43,7 +40,6 @@ export const uploadFile = (req: Request, res: Response): void => {
     }
 
     busboy.on('field', (fieldname, val) => {
-        console.log(`Field received: ${fieldname} = ${val}`);
         if (fieldname === 'uploadToken') {
             uploadToken = val;
             const currentPercent = totalSizeHeader > 0 ? Math.min(99, Math.floor((totalBytesReceived / totalSizeHeader) * 100)) : 1;
@@ -52,13 +48,11 @@ export const uploadFile = (req: Request, res: Response): void => {
     });
 
     busboy.on('file', (fieldname, file, info) => {
-        console.log(`File stream started: ${info.filename}`);
         filename = info.filename || 'uploaded_file';
         const uploadPath = path.join(uploadsDir, filename);
         const writeStream = fs.createWriteStream(uploadPath);
 
         file.on('end', () => {
-            console.log('File stream ended');
             if (uploadToken) {
                 progressStore.setProgress(uploadToken, 99, filename);
             }

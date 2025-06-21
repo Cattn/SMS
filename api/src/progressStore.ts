@@ -18,11 +18,9 @@ class ProgressStore {
         };
 
         this.store.set(token, progressObj);
-        console.log(`Setting progress for ${token}: ${progress}%`);
 
         const subs = this.listeners.get(token);
         if (subs) {
-            console.log(`Notifying ${subs.size} subscribers for token ${token}`);
             for (const cb of subs) {
                 cb(progressObj);
             }

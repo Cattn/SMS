@@ -48,7 +48,6 @@
             const data = JSON.parse(event.data);
             targetProgress = data.progress;
             animateProgress();
-            console.log('Progress update:', data.progress);
             
             if (data.progress >= 100) {
                 progressEventSource?.close();
