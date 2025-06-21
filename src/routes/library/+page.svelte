@@ -3,8 +3,9 @@
     import { page } from '$app/state';
     import { Button, Snackbar } from 'm3-svelte';
     import { config } from '$lib/config';
+    import { enhance } from '$app/forms';
     
-    let { data }: PageProps = $props();
+    let { data, form }: PageProps = $props();
 
     let snackbar: ReturnType<typeof Snackbar>;
 
@@ -83,9 +84,17 @@
             alert('Failed to copy link. Please try again.');
         }
     }
+
+    $effect(() => {
+        if (form?.success === true) {
+            snackbar.show({ message: form.message, closable: true });
+        } else if (form?.success === false) {
+            snackbar.show({ message: form.error, closable: true });
+        }
+    });
 </script>
 
-<div class="mt-12 ml-32">  
+<div class="mt-12 ml-32">
     <h1 class="text-4xl font-bold mb-4">Library</h1>
     
     {#if imageFiles.length > 0}
@@ -141,16 +150,19 @@
                             {/if}
                         </div>
                         <div class="flex justify-between items-end mt-2">
-                            <div>
+                            <div class="flex-1 min-w-0">
                                 <p class="text-sm text-gray-600 truncate">{file.name}</p>
                                 <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
                             </div>
                             <div>
-                                <Button variant="filled">
-                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                                        <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
-                                    </svg>
-                                </Button>
+                                <form method="POST" action="?/delete" use:enhance>
+                                    <input type="hidden" name="fileName" value={file.name} />
+                                    <Button type="submit" variant="filled">
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
+                                        </svg>
+                                    </Button>
+                                </form>
                             </div>
                         </div>
                     </div>
@@ -183,11 +195,14 @@
                                 <span class="font-medium block truncate">{file.name}</span>
                                 <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
                             </div>
-                            <Button variant="filled">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
-                                    <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
-                                </svg>
-                            </Button>
+                            <form method="POST" action="?/delete" use:enhance>
+                                <input type="hidden" name="fileName" value={file.name} />
+                                <Button type="submit" variant="filled">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
+                                    </svg>
+                                </Button>
+                            </form>
                         </div>
                         <div class="flex gap-2">
                             <Button variant="outlined" onclick={() => copyToClipboard(file.name)}>Copy Link</Button>

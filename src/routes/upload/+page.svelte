@@ -75,11 +75,11 @@
     }
 </script>
 
-<div class="flex flex-col items-center justify-center h-screen">
+<div class="flex flex-col items-center justify-center min-h-screen p-4 pl-28 md:p-0">
     <form 
         enctype="multipart/form-data" 
         method="POST" 
-        class="button-mod justify-center items-center flex flex-col" 
+        class="button-mod justify-center items-center flex flex-col w-full max-w-md md:max-w-lg" 
         use:enhance={({ formData }) => {
             uploadToken = generateUploadToken();
             formData.set('uploadToken', uploadToken);
@@ -100,16 +100,16 @@
         
         <input id="file" type="file" name="file" style="display: none;" bind:files />
         
-        <label for="file" class="text-center w-full bg-primary text-on-primary rounded-lg p-20 hover:bg-primary-container hover:text-on-primary-container hover:cursor-pointer">
+        <label for="file" class="text-center w-full bg-primary text-on-primary rounded-lg p-8 md:p-20 hover:bg-primary-container hover:text-on-primary-container hover:cursor-pointer">
             Select File
             <br>
             {#if selectedFileName}
-                <p class="mt-2 text-center text-lg text-on-primary">Selected: {selectedFileName}</p>
+                <p class="mt-2 text-center text-sm md:text-lg text-on-primary break-all">Selected: {selectedFileName}</p>
             {/if} 
         </label>
 
         {#if isUploading}
-            <div class="mt-2"></div>
+            <div class="mt-4 md:mt-2"></div>
             <WavyLinearProgress thickness={4} percent={uploadProgress} />
             <p class="text-sm text-gray-600 mt-2">{Math.round(uploadProgress)}% uploaded</p>
         {/if}
