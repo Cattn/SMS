@@ -52,6 +52,8 @@
 		"express-fileupload": "^1.5.1",
 		"iconify-icon": "^3.0.0",
 		"m3-svelte": "^4.4.0",
+		"retimer": "^4.0.0",
+		"sqlite3": "^5.1.7",
 		"webpack": "^5.99.9"
 	}
 }

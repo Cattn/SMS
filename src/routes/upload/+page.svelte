@@ -9,6 +9,12 @@
     let uploadToken = $state('');
     let progressEventSource: EventSource | null = null;
     let animationInterval: ReturnType<typeof setInterval> | null = null;
+    
+    // Expiration settings
+    let enableExpiration = $state(false);
+    let expirationMode = $state<'duration' | 'datetime'>('duration');
+    let expirationDuration = $state('1h');
+    let expirationDateTime = $state('');
 
     let selectedFileName = $derived.by(() => files && files.length > 0 ? files[0].name : null);
 
@@ -72,13 +78,19 @@
             }
         };
     }
+
+    function getMinDateTime(): string {
+        const now = new Date();
+        now.setMinutes(now.getMinutes() + 1); 
+        return now.toISOString().slice(0, 16); 
+    }
 </script>
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4 pl-28 md:p-0">
     <form 
         enctype="multipart/form-data" 
         method="POST" 
-        class="button-mod justify-center items-center flex flex-col w-full max-w-md md:max-w-lg" 
+        class="button-mod justify-center items-center flex flex-col w-full max-w-md md:max-w-lg space-y-4" 
         use:enhance={( { formData, cancel } ) => {
             uploadToken = generateUploadToken();
 
@@ -93,6 +105,14 @@
                 uploadFormData.append('file', files[0]);
             }
 
+            if (enableExpiration) {
+                if (expirationMode === 'duration') {
+                    uploadFormData.append('expiresIn', expirationDuration);
+                } else if (expirationDateTime) {
+                    uploadFormData.append('expiresAt', new Date(expirationDateTime).toISOString());
+                }
+            }
+
             const xhr = new XMLHttpRequest();
             xhr.open('POST', `http://${window.location.hostname}:5823/api/upload`);
             
@@ -102,6 +122,16 @@
                     isUploading = false;
                     progressEventSource?.close();
                     progressEventSource = null;
+                } else {
+                    try {
+                        const response = JSON.parse(xhr.responseText);
+                        if (response.expiresAt) {
+                            const expiresDate = new Date(response.expiresAt);
+                            console.log(`File will expire at: ${expiresDate.toLocaleString()}`);
+                        }
+                    } catch (e) {
+                        console.log('Upload successful');
+                    }
                 }
             };
             
@@ -115,8 +145,6 @@
             xhr.send(uploadFormData);
         }}
     >
-
-        
         <input id="file" type="file" name="file" style="display: none;" bind:files />
         
         <label for="file" class="text-center w-full bg-primary text-on-primary rounded-lg p-8 md:p-20 hover:bg-primary-container hover:text-on-primary-container hover:cursor-pointer">
@@ -127,13 +155,93 @@
             {/if} 
         </label>
 
+        <div class="w-full bg-surface-variant rounded-lg p-4 space-y-3">
+            <div class="flex items-center space-x-2">
+                <input 
+                    type="checkbox" 
+                    id="enableExpiration" 
+                    bind:checked={enableExpiration}
+                    class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
+                />
+                <label for="enableExpiration" class="text-sm font-medium text-on-surface">
+                    Set file expiration
+                </label>
+            </div>
+
+            {#if enableExpiration}
+                <div class="space-y-3">
+                    <div class="flex space-x-4">
+                        <label class="flex items-center space-x-2">
+                            <input 
+                                type="radio" 
+                                bind:group={expirationMode} 
+                                value="duration"
+                                class="w-4 h-4 text-primary bg-surface border-outline"
+                            />
+                            <span class="text-sm text-on-surface">Duration</span>
+                        </label>
+                        <label class="flex items-center space-x-2">
+                            <input 
+                                type="radio" 
+                                bind:group={expirationMode} 
+                                value="datetime"
+                                class="w-4 h-4 text-primary bg-surface border-outline"
+                            />
+                            <span class="text-sm text-on-surface">Specific Date & Time</span>
+                        </label>
+                    </div>
+
+                    {#if expirationMode === 'duration'}
+                        <div>
+                            <label for="duration" class="block text-sm font-medium text-on-surface mb-1">
+                                Delete after:
+                            </label>
+                            <select 
+                                id="duration"
+                                bind:value={expirationDuration}
+                                class="w-full px-3 py-2 bg-surface border border-outline rounded-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                            >
+                                <option value="5m">5 minutes</option>
+                                <option value="15m">15 minutes</option>
+                                <option value="30m">30 minutes</option>
+                                <option value="1h">1 hour</option>
+                                <option value="2h">2 hours</option>
+                                <option value="6h">6 hours</option>
+                                <option value="12h">12 hours</option>
+                                <option value="1d">1 day</option>
+                                <option value="3d">3 days</option>
+                                <option value="1w">1 week</option>
+                                <option value="2w">2 weeks</option>
+                                <option value="30d">1 month (30 days)</option>
+                            </select>
+                        </div>
+                    {/if}
+
+                    {#if expirationMode === 'datetime'}
+                        <div>
+                            <label for="datetime" class="block text-sm font-medium text-on-surface mb-1">
+                                Delete at:
+                            </label>
+                            <input 
+                                type="datetime-local"
+                                id="datetime"
+                                bind:value={expirationDateTime}
+                                min={getMinDateTime()}
+                                class="w-full px-3 py-2 bg-surface border border-outline rounded-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                            />
+                        </div>
+                    {/if}
+                </div>
+            {/if}
+        </div>
+
         {#if isUploading}
             <div class="mt-4 md:mt-2"></div>
             <WavyLinearProgress thickness={4} percent={uploadProgress} />
             <p class="text-sm text-gray-600 mt-2">{Math.round(uploadProgress)}% uploaded</p>
         {/if}
 
-        <Button square variant="filled" type="submit" disabled={isUploading}>
+        <Button square variant="filled" type="submit" disabled={isUploading || !files || files.length === 0}>
             {isUploading ? 'Uploading...' : 'Upload'}
         </Button>
     </form>

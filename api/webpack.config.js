@@ -28,6 +28,12 @@ export default {
   externals: {
     // Don't bundle node_modules for server
     express: 'commonjs express',
-    'express-fileupload': 'commonjs express-fileupload'
+    'express-fileupload': 'commonjs express-fileupload',
+    sqlite3: 'commonjs sqlite3',
+    busboy: 'commonjs busboy',
+    retimer: 'commonjs retimer',
+    fs: 'commonjs fs',
+    path: 'commonjs path',
+    crypto: 'commonjs crypto'
   }
 }; 
