@@ -45,6 +45,7 @@
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {
+		"@sveltejs/adapter-node": "^5.2.12",
 		"@types/express": "^5.0.3",
 		"@types/express-fileupload": "^1.5.1",
 		"busboy": "^1.6.0",
