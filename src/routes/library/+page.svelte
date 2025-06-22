@@ -2,7 +2,7 @@
     import type { PageProps } from './$types';
     import { page } from '$app/state';
     import { Button, Snackbar, ConnectedButtons, TogglePrimitive, Chip } from 'm3-svelte';
-    import { config } from '$lib/config';
+    import { configState } from '$lib/config.svelte';
     import { enhance } from '$app/forms';
     
     let { data, form }: PageProps = $props();
@@ -12,6 +12,7 @@
     let files = $derived(data.files.files);
     let loadedImages = $state(new Set<string>());
     let fileExpirations = $state(new Map<string, any>());
+    let expirationRequestsInProgress = $state(new Set<string>());
 
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
     const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
@@ -29,22 +30,24 @@
         return videoExtensions.includes(ext);
     };
 
-    const loadImage = (filename: string) => {
-        loadedImages.add(filename);
+    const loadImage = (relativePath: string) => {
+        loadedImages.add(relativePath);
         loadedImages = new Set(loadedImages);
     };
 
     let processedFiles = $derived(files.map((file: any) => {
         const fileName = file.name || '';
+        const relativePath = file.relative_path || fileName;
         const isImage = isImageFile(fileName);
         const isVideo = isVideoFile(fileName);
         const isLargeImage = isImage && file.size > MAX_SIZE_BYTES;
         const isLargeVideo = isVideo && file.size > MAX_SIZE_BYTES;
-        const shouldShowLoadButton = (isLargeImage || isLargeVideo) && !loadedImages.has(fileName);
-        const expiration = fileExpirations.get(fileName);
+        const shouldShowLoadButton = (isLargeImage || isLargeVideo) && !loadedImages.has(relativePath);
+        const expiration = fileExpirations.get(relativePath);
         
         return {
             name: fileName,
+            relative_path: relativePath,
             size: file.size,
             isImage,
             isVideo,
@@ -52,7 +55,7 @@
             isLargeVideo,
             shouldShowLoadButton,
             hasExpiration: expiration?.hasExpiration || false,
-            url: page.url.protocol + '//' + page.url.hostname + ':5823/api/getFile/' + fileName,
+            url: page.url.protocol + '//' + page.url.hostname + ':5823/api/getFile/' + encodeURIComponent(relativePath),
             extension: fileName ? fileName.substring(fileName.lastIndexOf('.') + 1).toUpperCase() : ''
         }
     }));
@@ -70,12 +73,12 @@
     let hoveredImage = $state<string | null>(null);
     let copiedFile = $state<string | null>(null);
 
-    function getLink(fileName: string) {
-        return config.domain + '/SMS/uploads/' + fileName;
+    function getLink(relativePath: string) {
+        return configState.server.domain + '/SMS/uploads/' + relativePath;
     }
 
-    async function copyToClipboard(fileName: string) {
-        const link = getLink(fileName);
+    async function copyToClipboard(relativePath: string) {
+        const link = getLink(relativePath);
         snackbar.show({message: 'Link copied to clipboard!', closable: true });
         
         try {
@@ -90,7 +93,7 @@
                 await navigator.clipboard.writeText(link);
             }
             
-            copiedFile = fileName;
+            copiedFile = relativePath;
             setTimeout(() => {
                 copiedFile = null;
             }, 2000);
@@ -112,25 +115,33 @@
     let showFile = $state(true);
     let showVideo = $state(true);
 
-    async function getFileExpiration(fileName: string) {
-        if (fileExpirations.has(fileName)) {
-            return fileExpirations.get(fileName);
+    async function getFileExpiration(relativePath: string) {
+        if (fileExpirations.has(relativePath)) {
+            return fileExpirations.get(relativePath);
         }
         
+        if (expirationRequestsInProgress.has(relativePath)) {
+            return { hasExpiration: false };
+        }
+        
+        expirationRequestsInProgress.add(relativePath);
+        
         try {
-            const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/getFileExpiration/${fileName}`);
+            const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/getFileExpiration/${encodeURIComponent(relativePath)}`);
             const data = await response.json();
-            fileExpirations.set(fileName, data);
+            fileExpirations.set(relativePath, data);
             fileExpirations = new Map(fileExpirations);
             return data;
         } catch (error) {
             console.error('Failed to fetch expiration:', error);
             return { hasExpiration: false };
+        } finally {
+            expirationRequestsInProgress.delete(relativePath);
         }
     }
 
-    async function showExpirationInfo(fileName: string) {
-        const expiration = await getFileExpiration(fileName);
+    async function showExpirationInfo(relativePath: string) {
+        const expiration = await getFileExpiration(relativePath);
         
         if (expiration.hasExpiration) {
             const expiresAt = new Date(expiration.expiresAt);
@@ -168,14 +179,22 @@
         }
     }
 
+    let expirationLoaded = $state(false);
+
     async function loadFileExpirations() {
+        if (expirationLoaded) return;
+        expirationLoaded = true;
+        
         for (const file of files) {
-            await getFileExpiration(file.name);
+            const relativePath = file.relative_path || file.name;
+            if (!fileExpirations.has(relativePath) && !expirationRequestsInProgress.has(relativePath)) {
+                await getFileExpiration(relativePath);
+            }
         }
     }
 
     $effect(() => {
-        if (files.length > 0) {
+        if (files.length > 0 && !expirationLoaded) {
             loadFileExpirations();
         }
     });
@@ -208,10 +227,12 @@
                             {#if file.shouldShowLoadButton}
                                 <div class="w-full h-48 bg-gray-100 rounded mb-2 flex flex-col items-center justify-center">
                                     <div class="text-center mb-3">
-                                        <p class="text-sm text-gray-600 mb-1">Large image ({formatFileSize(file.size)})</p>
+                                        {#if configState.display.showFileSize}
+                                            <p class="text-sm text-gray-600 mb-1">Large image ({formatFileSize(file.size)})</p>
+                                        {/if}
                                         <p class="text-xs text-gray-500">Click to load</p>
                                     </div>
-                                    <Button variant="filled" onclick={() => loadImage(file.name)}>
+                                    <Button variant="filled" onclick={() => loadImage(file.relative_path)}>
                                         Load Image
                                     </Button>
                                 </div>
@@ -219,16 +240,16 @@
                                 <!-- svelte-ignore a11y_no_static_element_interactions -->
                                 <div 
                                     class="relative"
-                                    onmouseenter={() => hoveredImage = file.name}
+                                    onmouseenter={() => hoveredImage = file.relative_path}
                                     onmouseleave={() => hoveredImage = null}
                                 >
-                                    {#if hoveredImage === file.name || copiedFile === file.name}
+                                    {#if hoveredImage === file.relative_path || copiedFile === file.relative_path}
                                         <button 
-                                            onclick={() => copyToClipboard(file.name)} 
+                                            onclick={() => copyToClipboard(file.relative_path)} 
                                             class="absolute inset-0 flex flex-col items-center justify-center rounded cursor-pointer z-50 border-0 transition-all"
                                             style="background-color: rgba(0, 0, 0, 0.5);"
                                         >
-                                            {#if copiedFile === file.name}
+                                            {#if copiedFile === file.relative_path}
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="40" height="40" viewBox="0 0 24 24" class="text-green-400 mb-2">
                                                     <path fill="currentColor" d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
                                                 </svg>
@@ -253,10 +274,12 @@
                         <div class="flex justify-between items-end mt-2">
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-gray-600 truncate">{file.name}</p>
-                                <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                {#if configState.display.showFileSize}
+                                    <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                {/if}
                                 {#if file.hasExpiration}
                                     <div class="button-flex-row mt-1">
-                                        <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                        <Chip click={() => showExpirationInfo(file.relative_path)} variant="input" icon={undefined}>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                                 <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
                                             </svg>
@@ -267,7 +290,7 @@
                             </div>
                             <div>
                                 <form method="POST" action="?/delete" use:enhance>
-                                    <input type="hidden" name="fileName" value={file.name} />
+                                    <input type="hidden" name="fileName" value={file.relative_path} />
                                     <Button type="submit" variant="filled">
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                             <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
@@ -292,10 +315,12 @@
                             {#if file.shouldShowLoadButton}
                                 <div class="w-full h-48 bg-gray-100 rounded mb-2 flex flex-col items-center justify-center">
                                     <div class="text-center mb-3">
+                                        {#if configState.display.showFileSize}
                                         <p class="text-sm text-gray-600 mb-1">Large video ({formatFileSize(file.size)})</p>
+                                        {/if}
                                         <p class="text-xs text-gray-500">Click to load</p>
                                     </div>
-                                    <Button variant="filled" onclick={() => loadImage(file.name)}>
+                                    <Button variant="filled" onclick={() => loadImage(file.relative_path)}>
                                         Load Video
                                     </Button>
                                 </div>
@@ -313,10 +338,12 @@
                             <div class="flex justify-between items-end mb-2">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm text-gray-600 truncate">{file.name}</p>
-                                    <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                    {#if configState.display.showFileSize}
+                                        <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                    {/if}
                                     {#if file.hasExpiration}
                                         <div class="button-flex-row mt-1">
-                                            <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                            <Chip click={() => showExpirationInfo(file.relative_path)} variant="input" icon={undefined}>
                                                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                                     <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
                                                 </svg>
@@ -327,7 +354,7 @@
                                 </div>
                                 <div class="pl-2">
                                     <form method="POST" action="?/delete" use:enhance>
-                                        <input type="hidden" name="fileName" value={file.name} />
+                                        <input type="hidden" name="fileName" value={file.relative_path} />
                                         <Button type="submit" variant="filled">
                                             <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                                 <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
@@ -338,7 +365,7 @@
                             </div>
                             <div class="flex gap-2 md:justify-end">
                                 <div class="flex-1 md:flex-initial min-w-0">
-                                    <Button variant="outlined" onclick={() => copyToClipboard(file.name)}>Copy Link</Button>
+                                    <Button variant="outlined" onclick={() => copyToClipboard(file.relative_path)}>Copy Link</Button>
                                 </div>
                                 <div class="flex-1 md:flex-initial min-w-0">
                                     <Button variant="tonal" href={file.url} download={file.name}>Download</Button>
@@ -373,10 +400,12 @@
                             </div>
                             <div class="flex-1 min-w-0 ml-1"> 
                                 <span class="font-medium block truncate">{file.name}</span>
-                                <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                {#if configState.display.showFileSize}                                
+                                    <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                {/if}
                                 {#if file.hasExpiration}
                                     <div class="button-flex-row mt-2 hidden md:block">
-                                        <Chip click={() => showExpirationInfo(file.name)} variant="assist" icon={undefined}>
+                                        <Chip click={() => showExpirationInfo(file.relative_path)} variant="assist" icon={undefined}>
                                             <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
                                                 <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
                                             </svg>
@@ -386,7 +415,7 @@
                                 {/if} 
                             </div>
                             <form method="POST" action="?/delete" use:enhance class="hidden md:block">
-                                <input type="hidden" name="fileName" value={file.name} />
+                                <input type="hidden" name="fileName" value={file.relative_path} />
                                 <Button type="submit" variant="filled">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                         <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
@@ -397,7 +426,7 @@
                         <div class="flex justify-between items-center md:hidden">
                             {#if file.hasExpiration}
                                 <div class="button-flex-row">
-                                    <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                    <Chip click={() => showExpirationInfo(file.relative_path)} variant="input" icon={undefined}>
                                         <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                             <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
                                         </svg>
@@ -406,7 +435,7 @@
                                 </div>
                             {/if}
                             <form method="POST" action="?/delete" use:enhance>
-                                <input type="hidden" name="fileName" value={file.name} />
+                                <input type="hidden" name="fileName" value={file.relative_path} />
                                 <Button type="submit" variant="filled">
                                     <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
                                         <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
@@ -415,7 +444,7 @@
                             </form>
                         </div>
                         <div class="flex gap-2">
-                            <Button variant="outlined" onclick={() => copyToClipboard(file.name)}>Copy Link</Button>
+                            <Button variant="outlined" onclick={() => copyToClipboard(file.relative_path)}>Copy Link</Button>
                             <Button variant="tonal" href={file.url} download={file.name}>Download</Button>
                         </div>
                     </div>

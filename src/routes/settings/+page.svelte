@@ -1,0 +1,419 @@
+<script lang="ts">
+    import { Button, Switch, Snackbar } from 'm3-svelte';
+    import { page } from '$app/state';
+    import { configState, updateConfig } from '$lib/config.svelte';
+
+    let snackbar: ReturnType<typeof Snackbar>;
+
+    // Use reactive getters to access global config state
+    let darkModeEnabled = $derived(configState.general.darkModeEnabled);
+    let defaultExpirationEnabled = $derived(configState.upload.defaultExpirationEnabled);
+    let defaultExpiration = $derived(configState.upload.defaultExpiration);
+    let autoCopyLinks = $derived(configState.upload.autoCopyLinks);
+    let showFileSize = $derived(configState.display.showFileSize);
+    let domain = $derived(configState.server.domain);
+    let systemInfo = $derived(configState.system || {
+        version: '0.0.1',
+        storageUsed: '0 B',
+        totalFiles: 0
+    });
+
+    async function loadSettings() {
+        try {
+            const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/config`);
+            if (response.ok) {
+                const config = await response.json();
+                updateConfig(config);
+            }
+        } catch (error) {
+            console.error('Failed to load settings:', error);
+        }
+    }
+
+    async function saveSettings() {
+        try {
+            const config = {
+                general: { darkModeEnabled },
+                upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
+                display: { showFileSize },
+                server: { domain }
+            };
+
+            const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/config`, {
+                method: 'PUT',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(config)
+            });
+
+            if (response.ok) {
+                // Update global config state after successful save
+                updateConfig(config);
+                snackbar.show({ message: 'Settings saved successfully!', closable: true });
+            } else {
+                snackbar.show({ message: 'Failed to save settings', closable: true });
+            }
+        } catch (error) {
+            console.error('Failed to save settings:', error);
+            snackbar.show({ message: 'Failed to save settings', closable: true });
+        }
+    }
+
+    loadSettings();
+
+    function resetSettings() {
+        if (confirm('Are you sure you want to reset all settings to default values?')) {
+            const defaultConfig = {
+                general: { darkModeEnabled: false },
+                upload: { defaultExpirationEnabled: false, defaultExpiration: '1h', autoCopyLinks: true },
+                display: { showFileSize: true },
+                server: { domain: '' }
+            };
+            
+            updateConfig(defaultConfig);
+            snackbar.show({ message: 'Settings reset to defaults', closable: true });
+        }
+    }
+
+    function exportSettings() {
+        const settings = {
+            general: { darkModeEnabled },
+            upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
+            display: { showFileSize },
+            server: { domain }
+        };
+        
+        const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = 'SMS_config.json';
+        a.click();
+        URL.revokeObjectURL(url);
+        
+        snackbar.show({ message: 'Settings exported successfully', closable: true });
+    }
+
+    function importSettings() {
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.json';
+        input.onchange = (event) => {
+            const file = (event.target as HTMLInputElement).files?.[0];
+            if (file) {
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const settings = JSON.parse(e.target?.result as string);
+                        
+                        const newConfig = {
+                            general: {
+                                darkModeEnabled: settings.general?.darkModeEnabled ?? false
+                            },
+                            upload: {
+                                defaultExpirationEnabled: settings.upload?.defaultExpirationEnabled ?? false,
+                                defaultExpiration: settings.upload?.defaultExpiration ?? '1h',
+                                autoCopyLinks: settings.upload?.autoCopyLinks ?? true
+                            },
+                            display: {
+                                showFileSize: settings.display?.showFileSize ?? true
+                            },
+                            server: {
+                                domain: settings.server?.domain ?? ''
+                            }
+                        };
+                        
+                        updateConfig(newConfig);
+                        snackbar.show({ message: 'Settings imported successfully', closable: true });
+                    } catch (error) {
+                        snackbar.show({ message: 'Failed to import settings - Invalid file format', closable: true });
+                    }
+                };
+                reader.readAsText(file);
+            }
+        };
+        input.click();
+    }
+
+    // Helper functions to update individual config values
+    function updateDarkMode(e: Event) {
+        const target = e.target as HTMLInputElement;
+        updateConfig({
+            ...configState,
+            general: { ...configState.general, darkModeEnabled: target.checked }
+        });
+    }
+
+    function updateDefaultExpirationEnabled(e: Event) {
+        const target = e.target as HTMLInputElement;
+        updateConfig({
+            ...configState,
+            upload: { ...configState.upload, defaultExpirationEnabled: target.checked }
+        });
+    }
+
+    function updateDefaultExpiration(e: Event) {
+        const target = e.target as HTMLSelectElement;
+        updateConfig({
+            ...configState,
+            upload: { ...configState.upload, defaultExpiration: target.value }
+        });
+    }
+
+    function updateAutoCopyLinks(e: Event) {
+        const target = e.target as HTMLInputElement;
+        updateConfig({
+            ...configState,
+            upload: { ...configState.upload, autoCopyLinks: target.checked }
+        });
+    }
+
+    function updateShowFileSize(e: Event) {
+        const target = e.target as HTMLInputElement;
+        updateConfig({
+            ...configState,
+            display: { ...configState.display, showFileSize: target.checked }
+        });
+    }
+
+    function updateDomain(e: Event) {
+        const target = e.target as HTMLInputElement;
+        updateConfig({
+            ...configState,
+            server: { ...configState.server, domain: target.value }
+        });
+    }
+</script>
+
+<div class="mt-12 ml-32">
+    <div class="flex flex-col gap-4 md:flex-row md:justify-between md:items-center mb-6 pr-10">
+        <h1 class="text-4xl font-bold">Settings</h1>
+        <div class="flex gap-2">
+            <Button variant="outlined" onclick={importSettings}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+                    <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6m4 18H6V4h7v5h5v11Z"/>
+                </svg>
+                Import
+            </Button>
+            <Button variant="outlined" onclick={exportSettings}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+                    <path fill="currentColor" d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8l-6-6m4 18H6V4h7v5h5v11Z"/>
+                </svg>
+                Export
+            </Button>
+            <Button variant="tonal" onclick={resetSettings}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+                    <path fill="currentColor" d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6c0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4l-4-4v3z"/>
+                </svg>
+                Reset
+            </Button>
+            <Button variant="filled" onclick={saveSettings}>
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+                    <path fill="currentColor" d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm2 16H5V5h11.17L19 7.83V19zm-7-7c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3zM6 6h9v4H6z"/>
+                </svg>
+                Save
+            </Button>
+        </div>
+    </div>
+
+    <section class="mb-8 mr-10">
+        <div class="bg-surface-container rounded-3xl p-6 shadow-sm">
+            <h2 class="text-2xl font-semibold text-on-surface mb-4 flex items-center">
+                <div class="w-8 h-8 bg-primary-container rounded-lg flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-on-primary-container">
+                        <path fill="currentColor" d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97c0-.33-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1c0 .33.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.66Z"/>
+                    </svg>
+                </div>
+                General
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="flex items-center justify-between p-4 bg-surface-variant rounded-2xl">
+                    <div>
+                        <h3 class="font-medium text-on-surface">Dark Mode</h3>
+                        <p class="text-sm text-on-surface-variant">Switch between light and dark themes</p>
+                    </div>
+                    <label>
+                        <Switch checked={darkModeEnabled} onchange={updateDarkMode} />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-8 mr-10">
+        <div class="bg-surface-container rounded-3xl p-6 shadow-sm">
+            <h2 class="text-2xl font-semibold text-on-surface mb-4 flex items-center">
+                <div class="w-8 h-8 bg-secondary-container rounded-lg flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-on-secondary-container">
+                        <path fill="currentColor" d="M6 20q-.825 0-1.412-.587T4 18v-2q0-.425.288-.712T5 15t.713.288T6 16v2h12v-2q0-.425.288-.712T19 15t.713.288T20 16v2q0 .825-.587 1.413T18 20zm5-12.15L9.125 9.725q-.3.3-.712.288T7.7 9.7q-.275-.3-.288-.7t.288-.7l3.6-3.6q.15-.15.325-.212T12 4.425t.375.063t.325.212l3.6 3.6q.3.3.288.7t-.288.7q-.3.3-.712.313t-.713-.288L13 7.85V15q0 .425-.288.713T12 16t-.712-.288T11 15z"/>
+                    </svg>
+                </div>
+                Upload Preferences
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="p-4 bg-surface-variant rounded-2xl">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h3 class="font-medium text-on-surface">Default Expiration</h3>
+                            <p class="text-sm text-on-surface-variant">Set automatic expiration for uploads</p>
+                        </div>
+                        <label>
+                            <Switch checked={defaultExpirationEnabled} onchange={updateDefaultExpirationEnabled} />
+                        </label>
+                    </div>
+                    
+                    {#if defaultExpirationEnabled}
+                        <div class="mt-3">
+                            <label for="defaultExpiration" class="block text-sm font-medium text-on-surface mb-2">
+                                Default duration:
+                            </label>
+                            <select 
+                                id="defaultExpiration"
+                                value={defaultExpiration}
+                                onchange={updateDefaultExpiration}
+                                class="w-full px-3 py-2 bg-surface border border-outline rounded-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                            >
+                                <option value="5m">5 minutes</option>
+                                <option value="15m">15 minutes</option>
+                                <option value="30m">30 minutes</option>
+                                <option value="1h">1 hour</option>
+                                <option value="2h">2 hours</option>
+                                <option value="6h">6 hours</option>
+                                <option value="12h">12 hours</option>
+                                <option value="1d">1 day</option>
+                                <option value="3d">3 days</option>
+                                <option value="1w">1 week</option>
+                                <option value="2w">2 weeks</option>
+                                <option value="30d">1 month (30 days)</option>
+                            </select>
+                        </div>
+                    {/if}
+                </div>
+
+                <div class="flex items-center justify-between p-4 bg-surface-variant rounded-2xl">
+                    <div>
+                        <h3 class="font-medium text-on-surface">Auto Copy Links</h3>
+                        <p class="text-sm text-on-surface-variant">Automatically copy links after upload</p>
+                    </div>
+                    <label>
+                        <Switch checked={autoCopyLinks} onchange={updateAutoCopyLinks} />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-8 mr-10">
+        <div class="bg-surface-container rounded-3xl p-6 shadow-sm">
+            <h2 class="text-2xl font-semibold text-on-surface mb-4 flex items-center">
+                <div class="w-8 h-8 bg-tertiary-container rounded-lg flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-on-tertiary-container">
+                        <path fill="currentColor" d="M12 9a3 3 0 0 0-3 3a3 3 0 0 0 3 3a3 3 0 0 0 3-3a3 3 0 0 0-3-3m0 8a5 5 0 0 1-5-5a5 5 0 0 1 5-5a5 5 0 0 1 5 5a5 5 0 0 1-5 5m0-12.5C7 4.5 2.73 7.61 1 12c1.73 4.39 6 7.5 11 7.5s9.27-3.11 11-7.5c-1.73-4.39-6-7.5-11-7.5Z"/>
+                    </svg>
+                </div>
+                Display Options
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="flex items-center justify-between p-4 bg-surface-variant rounded-2xl">
+                    <div>
+                        <h3 class="font-medium text-on-surface">Show File Sizes</h3>
+                        <p class="text-sm text-on-surface-variant">Display file sizes in library view</p>
+                    </div>
+                    <label>
+                        <Switch checked={showFileSize} onchange={updateShowFileSize} />
+                    </label>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-8 mr-10">
+        <div class="bg-surface-container rounded-3xl p-6 shadow-sm">
+            <h2 class="text-2xl font-semibold text-on-surface mb-4 flex items-center">
+                <div class="w-8 h-8 bg-error-container rounded-lg flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-on-error-container">
+                        <path fill="currentColor" d="M12 2A10 10 0 0 0 2 12a10 10 0 0 0 10 10a10 10 0 0 0 10-10A10 10 0 0 0 12 2zm3.5 6L12 10.5L8.5 8L12 5.5L15.5 8zM8.5 16L12 13.5L15.5 16L12 18.5L8.5 16z"/>
+                    </svg>
+                </div>
+                Server Configuration
+            </h2>
+            
+            <div class="space-y-6">
+                <div class="p-4 bg-surface-variant rounded-2xl">
+                    <h3 class="font-medium text-on-surface mb-2">Domain</h3>
+                    <p class="text-sm text-on-surface-variant mb-3">The base domain URL for file sharing links</p>
+                    <input 
+                        type="url"
+                        value={domain}
+                        oninput={updateDomain}
+                        placeholder=""
+                        class="w-full px-3 py-2 bg-surface border border-outline rounded-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                    />
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <section class="mb-20 mr-10">
+        <div class="bg-surface-container rounded-3xl p-6 shadow-sm">
+            <h2 class="text-2xl font-semibold text-on-surface mb-4 flex items-center">
+                <div class="w-8 h-8 bg-primary rounded-lg flex items-center justify-center mr-3">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="text-on-primary">
+                        <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5l1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z"/>
+                    </svg>
+                </div>
+                System Information
+            </h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <div class="p-4 bg-surface-variant rounded-2xl text-center">
+                    <h3 class="font-medium text-on-surface mb-1">Version</h3>
+                    <p class="text-2xl font-bold text-primary">{systemInfo.version}</p>
+                </div>
+                
+                <div class="p-4 bg-surface-variant rounded-2xl text-center">
+                    <h3 class="font-medium text-on-surface mb-1">Storage Used</h3>
+                    <p class="text-2xl font-bold text-primary">{systemInfo.storageUsed}</p>
+                </div>
+                
+                <div class="p-4 bg-surface-variant rounded-2xl text-center">
+                    <h3 class="font-medium text-on-surface mb-1">Total Files</h3>
+                    <p class="text-2xl font-bold text-primary">{systemInfo.totalFiles}</p>
+                </div>
+            </div>
+
+            <div class="mt-6 p-4 bg-surface-variant rounded-2xl">
+                <h3 class="font-medium text-on-surface mb-2">About SMS</h3>
+                <p class="text-sm text-on-surface-variant mb-3">
+                    Simple Message System (SMS) is a lightweight file sharing application built with SvelteKit and Material 3 design principles.
+                </p>
+                <div class="flex gap-2">
+                    <Button variant="tonal" onclick={() => window.open('https://github.com/Cattn/SMS', '_blank')}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="mr-1">
+                            <path fill="currentColor" d="M12 2A10 10 0 0 0 2 12c0 4.42 2.87 8.17 6.84 9.5c.5.08.66-.23.66-.5v-1.69c-2.77.6-3.36-1.34-3.36-1.34c-.46-1.16-1.11-1.47-1.11-1.47c-.91-.62.07-.6.07-.6c1 .07 1.53 1.03 1.53 1.03c.87 1.52 2.34 1.07 2.91.83c.09-.65.35-1.09.63-1.34c-2.22-.25-4.55-1.11-4.55-4.92c0-1.11.38-2 1.03-2.71c-.1-.25-.45-1.29.1-2.64c0 0 .84-.27 2.75 1.02c.79-.22 1.65-.33 2.5-.33c.85 0 1.71.11 2.5.33c1.91-1.29 2.75-1.02 2.75-1.02c.55 1.35.2 2.39.1 2.64c.65.71 1.03 1.6 1.03 2.71c0 3.82-2.34 4.66-4.57 4.91c.36.31.69.92.69 1.85V21c0 .27.16.59.67.5C19.14 20.16 22 16.42 22 12A10 10 0 0 0 12 2Z"/>
+                        </svg>
+                        GitHub
+                    </Button>
+                    <Button variant="tonal" onclick={() => snackbar.show({ message: 'SMS Settings v1.0.0', closable: true })}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="mr-1">
+                            <path fill="currentColor" d="M19.43 12.98c.04-.32.07-.64.07-.98s-.03-.66-.07-.98l2.11-1.65c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.3-.61-.22l-2.49 1c-.52-.4-1.08-.73-1.69-.98l-.38-2.65A.488.488 0 0 0 14 2h-4c-.25 0-.46.18-.49.42l-.38 2.65c-.61.25-1.17.59-1.69.98l-2.49-1c-.23-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64l2.11 1.65c-.04.32-.07.65-.07.98s.03.66.07.98l-2.11 1.65c-.19.15-.24.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1c.52.4 1.08.73 1.69.98l.38 2.65c.03.24.24.42.49.42h4c.25 0 .46-.18.49-.42l.38-2.65c.61-.25 1.17-.59 1.69-.98l2.49 1c.23.09.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64l-2.11-1.65zM12 15.5c-1.93 0-3.5-1.57-3.5-3.5s1.57-3.5 3.5-3.5s3.5 1.57 3.5 3.5s-1.57 3.5-3.5 3.5z"/>
+                        </svg>
+                        Settings
+                    </Button>
+                    <Button variant="tonal" onclick={() => snackbar.show({ message: 'Help documentation coming soon!', closable: true })}>
+                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" class="mr-1">
+                            <path fill="currentColor" d="M11 17h2v-6h-2v6zm1-8q.425 0 .713-.288T13 8t-.288-.713T12 7t-.712.288T11 8t.288.713T12 9zm0 13q-2.075 0-3.9-.788t-3.175-2.137T2.788 15.9T2 12t.788-3.9t2.137-3.175T8.1 2.788T12 2t3.9.788t3.175 2.137T21.213 8.1T22 12t-.788 3.9t-2.137 3.175t-3.175 2.138T12 22Z"/>
+                        </svg>
+                        Help
+                    </Button>
+                </div>
+            </div>
+        </div>
+    </section>
+</div>
+
+<Snackbar bind:this={snackbar} />

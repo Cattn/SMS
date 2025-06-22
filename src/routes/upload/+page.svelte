@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
     import { Button, WavyLinearProgress } from "m3-svelte";
-    import { config } from '$lib/config';
+    import { configState } from '$lib/config.svelte';
 
     let files = $state<FileList | undefined>();
     let uploadProgress = $state(0);
@@ -11,12 +11,15 @@
     let progressEventSource: EventSource | null = null;
     let animationInterval: ReturnType<typeof setInterval> | null = null;
 
-    let enableCopy = $state(false);
+    let enableCopy = $state(configState.upload.autoCopyLinks);
+
+    let enablePath = $state(false);
+    let uploadPath = $state('');
     
     // Expiration settings
-    let enableExpiration = $state(false);
+    let enableExpiration = $state(configState.upload.defaultExpirationEnabled);
     let expirationMode = $state<'duration' | 'datetime'>('duration');
-    let expirationDuration = $state('1h');
+    let expirationDuration = $state(configState.upload.defaultExpiration);
     let expirationDateTime = $state('');
 
     let selectedFileName = $derived.by(() => files && files.length > 0 ? files[0].name : null);
@@ -89,7 +92,7 @@
     }
 
     function getLink(fileName: string) {
-        return config.domain + '/SMS/uploads/' + fileName;
+        return configState.server.domain + '/SMS/uploads/' + fileName;
     }
 
     async function copyToClipboard(text: string) {
@@ -119,6 +122,10 @@
             if (files && files.length > 0) {
                 uploadFormData.append('fileSize', files[0].size.toString());
                 uploadFormData.append('file', files[0]);
+            }
+
+            if (enablePath && uploadPath.trim()) {
+                uploadFormData.append('uploadPath', uploadPath.trim());
             }
 
             if (enableExpiration) {
@@ -186,6 +193,17 @@
                 <div class="items-center flex space-x-2">
                     <input 
                         type="checkbox" 
+                        id="enablePath" 
+                        bind:checked={enablePath}
+                        class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
+                    />
+                    <label for="enablePath" class="text-sm font-medium text-on-surface">
+                        Upload to path
+                    </label>
+                </div>
+                <div class="items-center flex space-x-2">
+                    <input 
+                        type="checkbox" 
                         id="enableCopy" 
                         bind:checked={enableCopy}
                         class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
@@ -206,6 +224,24 @@
                     </label>
                 </div>
             </div>
+
+            {#if enablePath}
+                <div>
+                    <label for="uploadPath" class="block text-sm font-medium text-on-surface mb-1">
+                        Upload to folder:
+                    </label>
+                    <input 
+                        type="text"
+                        id="uploadPath"
+                        bind:value={uploadPath}
+                        placeholder="e.g., images/ or leave empty for root"
+                        class="w-full px-3 py-2 bg-surface border border-outline rounded-md text-on-surface focus:ring-1 focus:ring-primary focus:border-primary"
+                    />
+                    <p class="text-xs text-on-surface-variant mt-1">
+                        Specify a relative path from the root. Use forward slashes (/) to separate folders.
+                    </p>
+                </div>
+            {/if}
 
             {#if enableExpiration}
                 <div class="space-y-3">

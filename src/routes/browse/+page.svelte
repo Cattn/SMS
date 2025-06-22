@@ -4,7 +4,7 @@
     import { page } from '$app/state';
     import { goto } from '$app/navigation';
     import { enhance } from '$app/forms';
-    import { config } from '$lib/config';
+    import { configState } from '$lib/config.svelte';
     
     let { data }: { data: PageData } = $props();
     
@@ -165,7 +165,7 @@
     };
 
     const copyFileLink = async (file: any) => {
-        const link = config.domain + '/SMS/uploads/' + file.relative_path;
+        const link = configState.server.domain + '/SMS/uploads/' + file.relative_path;
         try {
             await navigator.clipboard.writeText(link);
             snackbar.show({ message: 'Link copied to clipboard!', closable: true });
@@ -341,7 +341,9 @@
                             
                             <div class="flex-1 min-w-0 ml-1">
                                 <span class="font-medium block truncate">{file.name}</span>
-                                <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                {#if configState.display.showFileSize}
+                                    <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                {/if}
                             </div>
                         </div>
                         

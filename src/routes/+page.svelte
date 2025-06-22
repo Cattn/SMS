@@ -1,7 +1,7 @@
 <script lang="ts">
-    import { Button, Card } from 'm3-svelte';
+    import { Button } from 'm3-svelte';
     import { goto } from '$app/navigation';
-    import { config } from '$lib/config';
+    import { configState } from '$lib/config.svelte';
 </script>
 
 <div class="flex flex-col items-center justify-center min-h-screen p-4 pl-28 md:p-0 mb-8">

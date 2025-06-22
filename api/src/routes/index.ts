@@ -7,6 +7,7 @@ import { deleteFile } from '../handlers/delete';
 import { getFile, getFiles, getFilesInPath, getFileExpiration } from '../handlers/get';
 import { getUploadProgress } from '../handlers/progress';
 import { createFolder, getFolders, deleteFolder, toggleFolderExclusion, getFolderTree } from '../handlers/fs';
+import { getConfig, updateConfig } from '../handlers/config';
 
 router.post('/upload', uploadFile);
 router.get('/delete/:filename', deleteFile);
@@ -21,5 +22,8 @@ router.get('/folders', getFolders);
 router.get('/folders/tree', getFolderTree);
 router.delete('/folders/:folderPath', deleteFolder);
 router.patch('/folders/:folderPath/exclusion', toggleFolderExclusion);
+
+router.get('/config', getConfig);
+router.put('/config', updateConfig);
 
 export default router;

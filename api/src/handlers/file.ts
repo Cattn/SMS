@@ -25,6 +25,52 @@ function parseDuration(duration: string): Date {
     }
 }
 
+function normalizeUploadPath(uploadPath: string): string {
+    if (!uploadPath || uploadPath.trim() === '') {
+        return '';
+    }
+    
+    let normalized = uploadPath.trim();
+    
+    if (normalized.startsWith('/')) {
+        normalized = normalized.substring(1);
+    }
+    
+    if (normalized.endsWith('/')) {
+        normalized = normalized.substring(0, normalized.length - 1);
+    }
+    
+    return normalized;
+}
+
+function validateUploadPath(uploadPath: string): string | null {
+    if (!uploadPath) return null;
+    
+    const invalidChars = /[<>:"/\\|?*]/;
+    const hasControlChars = uploadPath.split('').some((char: string) => char.charCodeAt(0) <= 31);
+    if (invalidChars.test(uploadPath) || hasControlChars) {
+        return 'Upload path contains invalid characters';
+    }
+    
+    const pathDepth = uploadPath.split('/').length;
+    if (pathDepth > 10) {
+        return 'Maximum folder depth exceeded (10 levels)';
+    }
+    
+    const reservedNames = ['CON', 'PRN', 'AUX', 'NUL', 'COM1', 'COM2', 'COM3', 'COM4', 'COM5', 'COM6', 'COM7', 'COM8', 'COM9', 'LPT1', 'LPT2', 'LPT3', 'LPT4', 'LPT5', 'LPT6', 'LPT7', 'LPT8', 'LPT9'];
+    const pathParts = uploadPath.split('/');
+    for (const part of pathParts) {
+        if (reservedNames.includes(part.toUpperCase())) {
+            return 'Upload path contains reserved folder name';
+        }
+        if (part.length > 255) {
+            return 'Folder name too long in upload path';
+        }
+    }
+    
+    return null;
+}
+
 export const uploadFile = (req: Request, res: Response): void => {
     const totalSizeHeader = parseInt(req.headers['content-length'] || '0', 10);
     let totalBytesReceived = 0;
@@ -33,6 +79,7 @@ export const uploadFile = (req: Request, res: Response): void => {
     let lastProgressTime = 0;
     let expiresIn = '';
     let expiresAt = '';
+    let uploadPath = '';
     
     req.on('data', (chunk: Buffer) => {
         totalBytesReceived += chunk.length;
@@ -57,6 +104,7 @@ export const uploadFile = (req: Request, res: Response): void => {
     });
 
     let filename = '';
+    const fileBuffers: Buffer[] = [];
     const uploadsDir = path.join(process.cwd(), '../uploads');
     if (!fs.existsSync(uploadsDir)) {
         fs.mkdirSync(uploadsDir, { recursive: true });
@@ -71,25 +119,58 @@ export const uploadFile = (req: Request, res: Response): void => {
             expiresIn = val;
         } else if (fieldname === 'expiresAt') {
             expiresAt = val;
+        } else if (fieldname === 'uploadPath') {
+            uploadPath = normalizeUploadPath(val);
+            console.log('Upload path received:', val, '-> normalized:', uploadPath);
         }
     });
 
     busboy.on('file', (fieldname, file, info) => {
         filename = info.filename || 'uploaded_file';
-        const uploadPath = path.join(uploadsDir, filename);
-        const writeStream = fs.createWriteStream(uploadPath);
+        
+        file.on('data', (chunk: Buffer) => {
+            fileBuffers.push(chunk);
+        });
 
         file.on('end', () => {
             if (uploadToken) {
                 progressStore.setProgress(uploadToken, 99, filename);
             }
         });
-
-        file.pipe(writeStream);
     });
 
     busboy.on('finish', async () => {
         try {
+            if (uploadPath) {
+                const validationError = validateUploadPath(uploadPath);
+                if (validationError) {
+                    return res.status(400).json({ error: validationError });
+                }
+            }
+            
+            const targetDir = uploadPath ? path.join(uploadsDir, uploadPath) : uploadsDir;
+            
+            if (!fs.existsSync(targetDir)) {
+                try {
+                    fs.mkdirSync(targetDir, { recursive: true });
+                    console.log('Created directory:', targetDir);
+                } catch (error) {
+                    console.error('Failed to create directory:', error);
+                    return res.status(500).json({ error: 'Failed to create upload directory' });
+                }
+            }
+            
+            const normalizedUploadsDir = path.resolve(uploadsDir);
+            const normalizedTargetDir = path.resolve(targetDir);
+            if (!normalizedTargetDir.startsWith(normalizedUploadsDir)) {
+                return res.status(403).json({ error: 'Access denied: upload path must be within uploads directory' });
+            }
+            
+            const finalUploadPath = path.join(targetDir, filename);
+            const fileBuffer = Buffer.concat(fileBuffers);
+            fs.writeFileSync(finalUploadPath, fileBuffer);
+            console.log('File written to:', finalUploadPath);
+
             if (uploadToken) {
                 progressStore.setProgress(uploadToken, 100, filename);
                 setTimeout(() => progressStore.deleteProgress(uploadToken), 5000);
@@ -108,23 +189,24 @@ export const uploadFile = (req: Request, res: Response): void => {
                     return res.status(400).json({ error: 'Expiration time must be in the future' });
                 }
                 
-                const filePath = path.join(uploadsDir, filename);
                 const scheduleId = await DeletionManager.scheduleFileDeletion(
                     filename, 
-                    filePath, 
+                    finalUploadPath, 
                     deletionTime
                 );
                 
                 res.json({ 
                     message: 'File uploaded successfully',
                     filename,
+                    uploadPath: uploadPath || '',
                     expiresAt: deletionTime,
                     scheduleId
                 });
             } else {
                 res.json({ 
                     message: 'File uploaded successfully',
-                    filename
+                    filename,
+                    uploadPath: uploadPath || ''
                 });
             }
         } catch (error) {

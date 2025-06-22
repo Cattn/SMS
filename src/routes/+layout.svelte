@@ -4,8 +4,13 @@
 	import '../main.css';
 
 	import SideBar from '$lib/components/SideBar.svelte';
+	import { initializeConfig } from '$lib/config.svelte';
 	
-	let { children } = $props();
+	let { children, data } = $props();
+	
+	if (data?.config) {
+		initializeConfig(data.config);
+	}
 </script>
 
 <SideBar />
