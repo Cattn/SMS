@@ -66,7 +66,7 @@ export const actions: Actions = {
 
 		try {
 			const response = await fetch(
-				'http://' + url.hostname + `:5823/folders/${encodeURIComponent(folderPath)}`,
+				'http://' + url.hostname + `:5823/api/folders/${encodeURIComponent(folderPath)}`,
 				{
 					method: 'DELETE'
 				}
