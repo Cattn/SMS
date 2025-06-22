@@ -2,13 +2,14 @@ import sqlite3 from 'sqlite3';
 
 class Database {
     private db: sqlite3.Database;
+    private initPromise: Promise<void>;
 
     constructor(dbPath: string = './data/sms.db') {
         this.db = new sqlite3.Database(dbPath);
-        this.initTables();
+        this.initPromise = this.initTables();
     }
 
-    private async initTables() {
+    private async initTables(): Promise<void> {
         const schemaSQL = `
             CREATE TABLE IF NOT EXISTS folders (
                 id TEXT PRIMARY KEY,
@@ -43,13 +44,23 @@ class Database {
         
         return new Promise<void>((resolve, reject) => {
             this.db.exec(schemaSQL, (err) => {
-                if (err) reject(err);
-                else resolve();
+                if (err) {
+                    console.error('Database initialization error:', err);
+                    reject(err);
+                } else {
+                    console.log('Database tables initialized successfully');
+                    resolve();
+                }
             });
         });
     }
 
+    async ensureInitialized(): Promise<void> {
+        return this.initPromise;
+    }
+
     async run(sql: string, params: (string | number | boolean | null)[] = []): Promise<sqlite3.RunResult> {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
             this.db.run(sql, params, function(err) {
                 if (err) reject(err);
@@ -59,6 +70,7 @@ class Database {
     }
 
     async get<T = unknown>(sql: string, params: (string | number | boolean | null)[] = []): Promise<T | undefined> {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
             this.db.get(sql, params, (err, row) => {
                 if (err) reject(err);
@@ -68,6 +80,7 @@ class Database {
     }
 
     async all<T = unknown>(sql: string, params: (string | number | boolean | null)[] = []): Promise<T[]> {
+        await this.ensureInitialized();
         return new Promise((resolve, reject) => {
             this.db.all(sql, params, (err, rows) => {
                 if (err) reject(err);

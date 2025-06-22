@@ -1,6 +1,7 @@
 import express from 'express';
 import itemRoutes from './routes/index';
 import { errorHandler } from './middleware/errorHandker';
+import { db } from './db/db';
 
 const app = express();
 
@@ -17,7 +18,16 @@ app.use((req, res, next) => {
 
 app.use(express.json());
 
-app.use('/api/', itemRoutes);
+app.use('/api/', async (req, res, next) => {
+    try {
+        await db.ensureInitialized();
+        next();
+    } catch (error) {
+        console.error('Database not ready:', error);
+        res.status(503).json({ error: 'Database not ready. Please try again later.' });
+    }
+}, itemRoutes);
+
 app.use(errorHandler);
 
 export default app;
