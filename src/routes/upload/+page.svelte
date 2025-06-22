@@ -101,6 +101,28 @@
 			console.log('Link copied to clipboard');
 		} catch (err) {
 			console.error('Failed to copy to clipboard:', err);
+			
+			try {
+				const textArea = document.createElement('textarea');
+				textArea.value = text;
+				textArea.style.position = 'fixed';
+				textArea.style.left = '-999999px';
+				textArea.style.top = '-999999px';
+				document.body.appendChild(textArea);
+				textArea.focus();
+				textArea.select();
+				
+				const successful = document.execCommand('copy');
+				document.body.removeChild(textArea);
+				
+				if (successful) {
+					console.log('Link copied to clipboard (fallback)');
+				} else {
+					console.error('Fallback copy method failed');
+				}
+			} catch (fallbackErr) {
+				console.error('Both clipboard methods failed:', fallbackErr);
+			}
 		}
 	}
 </script>

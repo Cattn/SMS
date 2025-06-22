@@ -105,7 +105,27 @@
 			await navigator.clipboard.writeText(link);
 			snackbar.show({ message: 'Link copied to clipboard!', closable: true });
 		} catch (err) {
-			snackbar.show({ message: 'Failed to copy link', closable: true });
+			try {
+				const textArea = document.createElement('textarea');
+				textArea.value = link;
+				textArea.style.position = 'fixed';
+				textArea.style.left = '-999999px';
+				textArea.style.top = '-999999px';
+				document.body.appendChild(textArea);
+				textArea.focus();
+				textArea.select();
+				
+				const successful = document.execCommand('copy');
+				document.body.removeChild(textArea);
+				
+				if (successful) {
+					snackbar.show({ message: 'Link copied to clipboard!', closable: true });
+				} else {
+					snackbar.show({ message: 'Failed to copy link', closable: true });
+				}
+			} catch (fallbackErr) {
+				snackbar.show({ message: 'Failed to copy link', closable: true });
+			}
 		}
 	};
 </script>
