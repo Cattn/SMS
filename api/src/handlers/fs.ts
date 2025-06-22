@@ -73,8 +73,28 @@ export const createFolder = async (req: Request, res: Response): Promise<void> =
             return;
         }
 
-        if (!fs.existsSync(fullFolderPath)) {
-            fs.mkdirSync(fullFolderPath, { recursive: true });
+        try {
+            let targetPath = fullFolderPath;
+            
+            if (parentPath) {
+                const parentInUploads = path.join(uploadsDir, parentPath);
+                if (fs.existsSync(parentInUploads)) {
+                    const realParentPath = fs.realpathSync(parentInUploads);
+                    targetPath = path.join(realParentPath, folderName);
+                } else {
+                    res.status(404).json({ error: 'Parent folder not found' });
+                    return;
+                }
+            }
+            
+            if (!fs.existsSync(targetPath)) {
+                fs.mkdirSync(targetPath, { recursive: true });
+            }
+            
+        } catch (symlinkError) {
+            console.error('Error creating folder (possible symlink issue):', symlinkError);
+            res.status(500).json({ error: 'Unable to create folder - check if parent directory is accessible' });
+            return;
         }
 
         const folderId = crypto.randomUUID();
@@ -311,7 +331,7 @@ export const scanAndSyncFolders = async (): Promise<void> => {
                     
                     if (item.isDirectory()) {
                         isDirectory = true;
-                    } else if (item.isSymbolicLink()) {
+                    } else if (item.isSymbolicLink()) { 
                         try {
                             const linkTarget = fs.statSync(itemPath);
                             if (linkTarget.isDirectory()) {
