@@ -42,7 +42,7 @@ const defaultConfig: Config = {
     showFileSize: true
   },
   server: {
-    domain: 'https://play.maple.music'
+    domain: ''
   }
 };
 
