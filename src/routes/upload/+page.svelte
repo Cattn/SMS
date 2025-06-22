@@ -1,6 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
     import { Button, WavyLinearProgress } from "m3-svelte";
+    import { config } from '$lib/config';
 
     let files = $state<FileList | undefined>();
     let uploadProgress = $state(0);
@@ -9,6 +10,8 @@
     let uploadToken = $state('');
     let progressEventSource: EventSource | null = null;
     let animationInterval: ReturnType<typeof setInterval> | null = null;
+
+    let enableCopy = $state(false);
     
     // Expiration settings
     let enableExpiration = $state(false);
@@ -64,7 +67,7 @@
                         clearInterval(animationInterval);
                         animationInterval = null;
                     }
-                }, 500);
+                }, 500); 
             }
         };
 
@@ -83,6 +86,19 @@
         const now = new Date();
         now.setMinutes(now.getMinutes() + 1); 
         return now.toISOString().slice(0, 16); 
+    }
+
+    function getLink(fileName: string) {
+        return config.domain + '/SMS/uploads/' + fileName;
+    }
+
+    async function copyToClipboard(text: string) {
+        try {
+            await navigator.clipboard.writeText(text);
+            console.log('Link copied to clipboard');
+        } catch (err) {
+            console.error('Failed to copy to clipboard:', err);
+        }
     }
 </script>
 
@@ -129,8 +145,18 @@
                             const expiresDate = new Date(response.expiresAt);
                             console.log(`File will expire at: ${expiresDate.toLocaleString()}`);
                         }
+                        
+                        if (enableCopy && files && files.length > 0) {
+                            const link = getLink(files[0].name);
+                            copyToClipboard(link);
+                        }
                     } catch (e) {
                         console.log('Upload successful');
+                        
+                        if (enableCopy && files && files.length > 0) {
+                            const link = getLink(files[0].name);
+                            copyToClipboard(link);
+                        }
                     }
                 }
             };
@@ -156,16 +182,29 @@
         </label>
 
         <div class="w-full bg-surface-variant rounded-lg p-4 space-y-3">
-            <div class="flex items-center space-x-2">
-                <input 
-                    type="checkbox" 
-                    id="enableExpiration" 
-                    bind:checked={enableExpiration}
-                    class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
-                />
-                <label for="enableExpiration" class="text-sm font-medium text-on-surface">
-                    Set file expiration
-                </label>
+            <div class="flex flex-col items-left space-y-2">
+                <div class="items-center flex space-x-2">
+                    <input 
+                        type="checkbox" 
+                        id="enableCopy" 
+                        bind:checked={enableCopy}
+                        class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
+                    />
+                    <label for="enableCopy" class="text-sm font-medium text-on-surface">
+                        Copy link when done
+                    </label>
+                </div>
+                <div class="items-center flex space-x-2">
+                    <input 
+                        type="checkbox" 
+                        id="enableExpiration" 
+                        bind:checked={enableExpiration}
+                        class="w-4 h-4 text-primary bg-surface border-outline rounded focus:ring-primary"
+                    />
+                    <label for="enableExpiration" class="text-sm font-medium text-on-surface">
+                        Set file expiration
+                    </label>
+                </div>
             </div>
 
             {#if enableExpiration}
