@@ -15,8 +15,13 @@
 		"build:api": "cd api && npx webpack",
 		"start:api": "cd api && node dist/server.cjs",
 		"dev:api": "npm run build:api && npm run start:api",
+		"Ldev:api": "npm run start:api",
 		"start": "npm run build && BODY_SIZE_LIMIT=Infinity node server.js",
-		"startall": "concurrently \"npm run start\" \"npm run dev:api\""
+		"Lstart": "BODY_SIZE_LIMIT=Infinity node server.js",
+		"startall": "concurrently \"npm run start\" \"npm run dev:api\"",
+		"ncuStart": "concurrently \"npm run Lstart\" \"npm run dev:api\"",
+		"nsuStart": "concurrently \"npm run start\" \"npm run Ldev:api\"",
+		"nobStart": "concurrently \"npm run Lstart\" \"npm run Ldev:api\""
 	},
 	"devDependencies": {
 		"@eslint/compat": "^1.2.5",
