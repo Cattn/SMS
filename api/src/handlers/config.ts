@@ -52,6 +52,9 @@ function readConfig(): Config {
       const configData = fs.readFileSync(configPath, 'utf8');
       return JSON.parse(configData);
     }
+    
+    console.log('Config file not found, creating default config...');
+    writeConfig(defaultConfig);
     return defaultConfig;
   } catch (error) {
     console.error('Error reading config:', error);
@@ -61,6 +64,11 @@ function readConfig(): Config {
 
 function writeConfig(config: Config): boolean {
   try {
+    const configDir = path.dirname(configPath);
+    if (!fs.existsSync(configDir)) {
+      fs.mkdirSync(configDir, { recursive: true });
+    }
+    
     fs.writeFileSync(configPath, JSON.stringify(config, null, 2));
     return true;
   } catch (error) {
