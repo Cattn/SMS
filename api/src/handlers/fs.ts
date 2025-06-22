@@ -291,13 +291,40 @@ export const scanAndSyncFolders = async (): Promise<void> => {
         const existingPaths = new Set(existingFolders.map(f => f.relative_path));
         
         const scannedFolders: Array<{ name: string; relativePath: string; parentPath: string }> = [];
+        const visitedRealPaths = new Set<string>();
         
         function scanDirectory(currentPath: string, relativePath: string = ''): void {
             try {
+                const realPath = fs.realpathSync(currentPath);
+                
+                if (visitedRealPaths.has(realPath)) {
+                    console.log(`Skipping already visited path (circular symlink): ${currentPath} -> ${realPath}`);
+                    return;
+                }
+                visitedRealPaths.add(realPath);
+                
                 const items = fs.readdirSync(currentPath, { withFileTypes: true });
                 
                 for (const item of items) {
+                    const itemPath = path.join(currentPath, item.name);
+                    let isDirectory = false;
+                    
                     if (item.isDirectory()) {
+                        isDirectory = true;
+                    } else if (item.isSymbolicLink()) {
+                        try {
+                            const linkTarget = fs.statSync(itemPath);
+                            if (linkTarget.isDirectory()) {
+                                isDirectory = true;
+                                console.log(`Found symbolic link to directory: ${item.name} -> ${fs.readlinkSync(itemPath)}`);
+                            }
+                        } catch (linkError) {
+                            console.warn(`Warning: Could not resolve symbolic link ${itemPath}:`, linkError);
+                            continue;
+                        }
+                    }
+                    
+                    if (isDirectory) {
                         const itemName = item.name;
                         const itemRelativePath = relativePath ? path.posix.join(relativePath, itemName) : itemName;
                         const itemParentPath = relativePath;
@@ -308,8 +335,7 @@ export const scanAndSyncFolders = async (): Promise<void> => {
                             parentPath: itemParentPath
                         });
                         
-                        const itemFullPath = path.join(currentPath, itemName);
-                        scanDirectory(itemFullPath, itemRelativePath);
+                        scanDirectory(itemPath, itemRelativePath);
                     }
                 }
             } catch (error) {
