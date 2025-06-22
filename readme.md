@@ -14,7 +14,7 @@
 
 ## Cloning
 
-To clone to the current directory: ``git clone https://github.com/Cattn/SMS``
+To clone to the current directory: ``git clone https://github.com/Cattn/SMS .``
 
 ## How to deploy?
 
