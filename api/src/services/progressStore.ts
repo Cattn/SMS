@@ -1,70 +1,70 @@
 interface UploadProgress {
-    token: string;
-    progress: number;
-    filename?: string;
-    timestamp: number;
+	token: string;
+	progress: number;
+	filename?: string;
+	timestamp: number;
 }
 
 class ProgressStore {
-    private store = new Map<string, UploadProgress>();
-    private listeners = new Map<string, Set<(progress: UploadProgress) => void>>();
+	private store = new Map<string, UploadProgress>();
+	private listeners = new Map<string, Set<(progress: UploadProgress) => void>>();
 
-    setProgress(token: string, progress: number, filename?: string) {
-        const progressObj: UploadProgress = {
-            token,
-            progress,
-            filename,
-            timestamp: Date.now()
-        };
+	setProgress(token: string, progress: number, filename?: string) {
+		const progressObj: UploadProgress = {
+			token,
+			progress,
+			filename,
+			timestamp: Date.now()
+		};
 
-        this.store.set(token, progressObj);
+		this.store.set(token, progressObj);
 
-        const subs = this.listeners.get(token);
-        if (subs) {
-            for (const cb of subs) {
-                cb(progressObj);
-            }
-        }
-    }
+		const subs = this.listeners.get(token);
+		if (subs) {
+			for (const cb of subs) {
+				cb(progressObj);
+			}
+		}
+	}
 
-    getProgress(token: string): UploadProgress | undefined {
-        return this.store.get(token);
-    }
+	getProgress(token: string): UploadProgress | undefined {
+		return this.store.get(token);
+	}
 
-    deleteProgress(token: string) {
-        this.store.delete(token);
-        this.listeners.delete(token);
-    }
+	deleteProgress(token: string) {
+		this.store.delete(token);
+		this.listeners.delete(token);
+	}
 
-    cleanup() {
-        const oneHourAgo = Date.now() - (60 * 60 * 1000);
-        for (const [token, progress] of this.store.entries()) {
-            if (progress.timestamp < oneHourAgo) {
-                this.store.delete(token);
-            }
-        }
-    }
+	cleanup() {
+		const oneHourAgo = Date.now() - 60 * 60 * 1000;
+		for (const [token, progress] of this.store.entries()) {
+			if (progress.timestamp < oneHourAgo) {
+				this.store.delete(token);
+			}
+		}
+	}
 
-    subscribe(token: string, cb: (progress: UploadProgress) => void) {
-        let subs = this.listeners.get(token);
-        if (!subs) {
-            subs = new Set();
-            this.listeners.set(token, subs);
-        }
-        subs.add(cb);
-    }
+	subscribe(token: string, cb: (progress: UploadProgress) => void) {
+		let subs = this.listeners.get(token);
+		if (!subs) {
+			subs = new Set();
+			this.listeners.set(token, subs);
+		}
+		subs.add(cb);
+	}
 
-    unsubscribe(token: string, cb: (progress: UploadProgress) => void) {
-        const subs = this.listeners.get(token);
-        if (subs) {
-            subs.delete(cb);
-            if (subs.size === 0) {
-                this.listeners.delete(token);
-            }
-        }
-    }
+	unsubscribe(token: string, cb: (progress: UploadProgress) => void) {
+		const subs = this.listeners.get(token);
+		if (subs) {
+			subs.delete(cb);
+			if (subs.size === 0) {
+				this.listeners.delete(token);
+			}
+		}
+	}
 }
 
 export const progressStore = new ProgressStore();
 
-setInterval(() => progressStore.cleanup(), 30 * 60 * 1000); 
+setInterval(() => progressStore.cleanup(), 30 * 60 * 1000);

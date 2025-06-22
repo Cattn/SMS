@@ -12,7 +12,7 @@ export const load: LayoutServerLoad = async ({ fetch, url }) => {
 	} catch (error) {
 		console.error('Failed to fetch config:', error);
 	}
-	
+
 	return {
 		config: {
 			general: {

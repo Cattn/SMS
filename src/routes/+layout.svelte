@@ -5,9 +5,9 @@
 
 	import SideBar from '$lib/components/SideBar.svelte';
 	import { initializeConfig } from '$lib/config.svelte';
-	
+
 	let { children, data } = $props();
-	
+
 	if (data?.config) {
 		initializeConfig(data.config);
 	}

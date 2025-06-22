@@ -6,7 +6,13 @@ import { uploadFile } from '../handlers/file';
 import { deleteFile } from '../handlers/delete';
 import { getFile, getFiles, getFilesInPath, getFileExpiration } from '../handlers/get';
 import { getUploadProgress } from '../handlers/progress';
-import { createFolder, getFolders, deleteFolder, toggleFolderExclusion, getFolderTree } from '../handlers/fs';
+import {
+	createFolder,
+	getFolders,
+	deleteFolder,
+	toggleFolderExclusion,
+	getFolderTree
+} from '../handlers/fs';
 import { getConfig, updateConfig } from '../handlers/config';
 
 router.post('/upload', uploadFile);
