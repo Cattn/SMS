@@ -1,6 +1,7 @@
 import app from './app';
 import { DeletionManager } from './services/timer';
 import { db } from './db/db';
+import { scanAndSyncFolders } from './handlers/fs';
 import fs from 'fs';
 import path from 'path';
 
@@ -21,6 +22,9 @@ async function startServer() {
 
         console.log('Initializing database...');
         await db.ensureInitialized();
+
+        console.log('Scanning and syncing existing folders...');
+        await scanAndSyncFolders();
 
         console.log('Restoring scheduled deletion timers...');
         await DeletionManager.restoreTimersOnStartup();

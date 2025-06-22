@@ -274,3 +274,72 @@ export const getFolderTree = async (req: Request, res: Response): Promise<void> 
         res.status(500).json({ error: 'Unable to fetch folder tree' });
     }
 };
+
+export const scanAndSyncFolders = async (): Promise<void> => {
+    try {
+        console.log('Scanning existing folders in uploads directory...');
+        
+        const uploadsDir = path.join(process.cwd(), '../uploads');
+        
+        if (!fs.existsSync(uploadsDir)) {
+            console.log('Uploads directory does not exist, creating it...');
+            fs.mkdirSync(uploadsDir, { recursive: true });
+            return;
+        }
+
+        const existingFolders = await db.all<FolderInfo>('SELECT relative_path FROM folders');
+        const existingPaths = new Set(existingFolders.map(f => f.relative_path));
+        
+        const scannedFolders: Array<{ name: string; relativePath: string; parentPath: string }> = [];
+        
+        function scanDirectory(currentPath: string, relativePath: string = ''): void {
+            try {
+                const items = fs.readdirSync(currentPath, { withFileTypes: true });
+                
+                for (const item of items) {
+                    if (item.isDirectory()) {
+                        const itemName = item.name;
+                        const itemRelativePath = relativePath ? path.posix.join(relativePath, itemName) : itemName;
+                        const itemParentPath = relativePath;
+                        
+                        scannedFolders.push({
+                            name: itemName,
+                            relativePath: itemRelativePath,
+                            parentPath: itemParentPath
+                        });
+                        
+                        const itemFullPath = path.join(currentPath, itemName);
+                        scanDirectory(itemFullPath, itemRelativePath);
+                    }
+                }
+            } catch (error) {
+                console.error(`Error scanning directory ${currentPath}:`, error);
+            }
+        }
+        
+        scanDirectory(uploadsDir);
+        
+        let addedCount = 0;
+        
+        for (const folder of scannedFolders) {
+            if (!existingPaths.has(folder.relativePath)) {
+                try {
+                    const folderId = crypto.randomUUID();
+                    await db.run(
+                        'INSERT INTO folders (id, name, relative_path, parent_path, is_excluded, created_at) VALUES (?, ?, ?, ?, ?, ?)',
+                        [folderId, folder.name, folder.relativePath, folder.parentPath, 0, Date.now()]
+                    );
+                    addedCount++;
+                    console.log(`Added folder to database: ${folder.relativePath}`);
+                } catch (error) {
+                    console.error(`Error adding folder ${folder.relativePath} to database:`, error);
+                }
+            }
+        }
+        
+        console.log(`Folder scan complete. Found ${scannedFolders.length} folders, added ${addedCount} new folders to database.`);
+        
+    } catch (error) {
+        console.error('Error during folder scan and sync:', error);
+    }
+};
