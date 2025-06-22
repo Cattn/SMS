@@ -1,7 +1,7 @@
 <script lang="ts">
     import type { PageProps } from './$types';
     import { page } from '$app/state';
-    import { Button, Snackbar, ConnectedButtons, TogglePrimitive } from 'm3-svelte';
+    import { Button, Snackbar, ConnectedButtons, TogglePrimitive, Chip } from 'm3-svelte';
     import { config } from '$lib/config';
     import { enhance } from '$app/forms';
     
@@ -11,6 +11,7 @@
 
     let files = $derived(data.files.files);
     let loadedImages = $state(new Set<string>());
+    let fileExpirations = $state(new Map<string, any>());
 
     const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
     const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
@@ -40,6 +41,7 @@
         const isLargeImage = isImage && file.size > MAX_SIZE_BYTES;
         const isLargeVideo = isVideo && file.size > MAX_SIZE_BYTES;
         const shouldShowLoadButton = (isLargeImage || isLargeVideo) && !loadedImages.has(fileName);
+        const expiration = fileExpirations.get(fileName);
         
         return {
             name: fileName,
@@ -49,6 +51,7 @@
             isLargeImage,
             isLargeVideo,
             shouldShowLoadButton,
+            hasExpiration: expiration?.hasExpiration || false,
             url: page.url.protocol + '//' + page.url.hostname + ':5823/api/getFile/' + fileName,
             extension: fileName ? fileName.substring(fileName.lastIndexOf('.') + 1).toUpperCase() : ''
         }
@@ -108,6 +111,74 @@
     let showImage = $state(true);
     let showFile = $state(true);
     let showVideo = $state(true);
+
+    async function getFileExpiration(fileName: string) {
+        if (fileExpirations.has(fileName)) {
+            return fileExpirations.get(fileName);
+        }
+        
+        try {
+            const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/getFileExpiration/${fileName}`);
+            const data = await response.json();
+            fileExpirations.set(fileName, data);
+            fileExpirations = new Map(fileExpirations);
+            return data;
+        } catch (error) {
+            console.error('Failed to fetch expiration:', error);
+            return { hasExpiration: false };
+        }
+    }
+
+    async function showExpirationInfo(fileName: string) {
+        const expiration = await getFileExpiration(fileName);
+        
+        if (expiration.hasExpiration) {
+            const expiresAt = new Date(expiration.expiresAt);
+            const timeRemaining = expiration.timeRemaining;
+            
+            let timeText = '';
+            if (timeRemaining > 0) {
+                const hours = Math.floor(timeRemaining / (1000 * 60 * 60));
+                const minutes = Math.floor((timeRemaining % (1000 * 60 * 60)) / (1000 * 60));
+                
+                if (hours > 24) {
+                    const days = Math.floor(hours / 24);
+                    timeText = `${days} day${days !== 1 ? 's' : ''}`;
+                } else if (hours > 0) {
+                    timeText = `${hours}h ${minutes}m`;
+                } else {
+                    timeText = `${minutes}m`;
+                }
+                
+                snackbar.show({
+                    message: `Expires in ${timeText} (${expiresAt.toLocaleString()})`,
+                    closable: true
+                });
+            } else {
+                snackbar.show({
+                    message: 'File has expired',
+                    closable: true
+                });
+            }
+        } else {
+            snackbar.show({
+                message: 'File does not expire',
+                closable: true
+            });
+        }
+    }
+
+    async function loadFileExpirations() {
+        for (const file of files) {
+            await getFileExpiration(file.name);
+        }
+    }
+
+    $effect(() => {
+        if (files.length > 0) {
+            loadFileExpirations();
+        }
+    });
 </script>
 
 <div class="mt-12 ml-32">
@@ -183,6 +254,16 @@
                             <div class="flex-1 min-w-0">
                                 <p class="text-sm text-gray-600 truncate">{file.name}</p>
                                 <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                {#if file.hasExpiration}
+                                    <div class="button-flex-row mt-1">
+                                        <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
+                                            </svg>
+                                            <span>Expires</span>
+                                        </Chip>
+                                    </div>
+                                {/if}
                             </div>
                             <div>
                                 <form method="POST" action="?/delete" use:enhance>
@@ -229,10 +310,20 @@
                             {/if}
                         </div>
                         <div class="mt-2">
-                            <div class="flex justify-between items-center mb-2">
+                            <div class="flex justify-between items-end mb-2">
                                 <div class="flex-1 min-w-0">
                                     <p class="text-sm text-gray-600 truncate">{file.name}</p>
                                     <p class="text-xs text-gray-400">{formatFileSize(file.size)}</p>
+                                    {#if file.hasExpiration}
+                                        <div class="button-flex-row mt-1">
+                                            <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                                    <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
+                                                </svg>
+                                                <span>Expires</span>
+                                            </Chip>
+                                        </div>
+                                    {/if}
                                 </div>
                                 <div class="pl-2">
                                     <form method="POST" action="?/delete" use:enhance>
@@ -278,12 +369,42 @@
                     }} class="flex flex-col md:flex-row md:items-center md:justify-between p-3 border rounded-lg hover-bg-secondary-container gap-3">
                         <div class="flex items-center space-x-1 flex-1 min-w-0">
                             <div class="w-10 h-10 bg-blue-100 rounded flex items-center justify-center">
-                                <span class="text-xs font-medium text-blue-600">{file.extension}</span> 
+                                <span class="text-xs font-medium text-blue-600">{file.extension}</span>
                             </div>
                             <div class="flex-1 min-w-0 ml-1"> 
                                 <span class="font-medium block truncate">{file.name}</span>
                                 <span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
+                                {#if file.hasExpiration}
+                                    <div class="button-flex-row mt-2 hidden md:block">
+                                        <Chip click={() => showExpirationInfo(file.name)} variant="assist" icon={undefined}>
+                                            <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24">
+                                                <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
+                                            </svg>
+                                            <span>Expires</span>
+                                        </Chip>
+                                    </div>
+                                {/if} 
                             </div>
+                            <form method="POST" action="?/delete" use:enhance class="hidden md:block">
+                                <input type="hidden" name="fileName" value={file.name} />
+                                <Button type="submit" variant="filled">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                        <path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17" />
+                                    </svg>
+                                </Button>
+                            </form>
+                        </div>
+                        <div class="flex justify-between items-center md:hidden">
+                            {#if file.hasExpiration}
+                                <div class="button-flex-row">
+                                    <Chip click={() => showExpirationInfo(file.name)} variant="input" icon={undefined}>
+                                        <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24">
+                                            <path fill="currentColor" d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10s10-4.48 10-10S17.52 2 12 2m0 15c-.55 0-1-.45-1-1v-4c0-.55.45-1 1-1s1 .45 1 1v4c0 .55-.45 1-1 1m1-8h-2V7h2z" />
+                                        </svg>
+                                        <span>Expires</span>
+                                    </Chip>
+                                </div>
+                            {/if}
                             <form method="POST" action="?/delete" use:enhance>
                                 <input type="hidden" name="fileName" value={file.name} />
                                 <Button type="submit" variant="filled">
@@ -313,5 +434,18 @@
 <style>
     .hover-bg-secondary-container:hover {
         background-color: rgb(var(--m3-scheme-primary, 0 123 255) / 0.05) !important;
+    }
+
+    .button-flex-row :global(button) :global(span) {
+        display: flex;
+        flex-direction: row;
+    }
+
+    .button-flex-row :global(button) :global(span) :global(svg) {
+        margin-right: 5px;
+    }
+
+    .button-flex-row :global(button) :global(span) :global(span) {
+        margin-top: 2px;
     }
 </style>
