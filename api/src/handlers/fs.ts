@@ -21,6 +21,8 @@ export const createFolder = async (req: Request, res: Response): Promise<void> =
     try {
         const { folderName, parentPath = '' } = req.body;
         
+        console.log('Creating folder:', { folderName, parentPath });
+        
         if (!folderName) {
             res.status(400).json({ error: 'Folder name is required' });
             return;
@@ -46,6 +48,8 @@ export const createFolder = async (req: Request, res: Response): Promise<void> =
 
         const relativePath = parentPath ? path.posix.join(parentPath, folderName) : folderName;
         
+        console.log('Calculated relativePath:', relativePath);
+        
         const pathDepth = relativePath.split('/').length;
         if (pathDepth > 10) {
             res.status(400).json({ error: 'Maximum folder depth exceeded (10 levels)' });
@@ -57,7 +61,10 @@ export const createFolder = async (req: Request, res: Response): Promise<void> =
             [relativePath]
         );
 
+        console.log('Existing folder check result:', existingFolder);
+
         if (existingFolder) {
+            console.log('Folder already exists with relative_path:', existingFolder.relative_path);
             res.status(409).json({ error: 'Folder already exists' });
             return;
         }
