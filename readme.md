@@ -2,9 +2,13 @@
     <strong>SMS</strong>
 </h3>
 
+### Showcases
+
 <p align="center">
     <img src="https://play.maple.music/SMS/uploads/Screenshot%202025-06-21%20225628.png" alt="SMS Screenshot">
 </p>
+
+https://github.com/user-attachments/assets/b7dfac92-f7b6-48b4-92dd-677fc9952333
 
 > Need Help? Join my [Development Server](https://discord.gg/Wxrp73HVj4)
 
