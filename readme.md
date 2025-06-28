@@ -24,7 +24,7 @@ To clone to the current directory: `git clone https://github.com/Cattn/SMS .`
 
 ### Install Dependencies
 
-`npm i install`
+`npm i`
 
 `npm i -g concurrently`
 
