@@ -1,10 +1,17 @@
 import sqlite3 from 'sqlite3';
+import fs from 'fs';
+import path from 'path';
 
 class Database {
 	private db: sqlite3.Database;
 	private initPromise: Promise<void>;
 
 	constructor(dbPath: string = './data/sms.db') {
+		const dbDir = path.dirname(dbPath);
+		if (!fs.existsSync(dbDir)) {
+			fs.mkdirSync(dbDir, { recursive: true });
+		}
+		
 		this.db = new sqlite3.Database(dbPath);
 		this.initPromise = this.initTables();
 	}
