@@ -16,6 +16,9 @@ RUN npm install
 # Copy the rest of the application code
 COPY . .
 
+# Create uploads directory with proper permissions
+RUN mkdir -p uploads && chmod 755 uploads
+
 # Expose required ports
 EXPOSE 1337 5823
 
