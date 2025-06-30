@@ -98,6 +98,13 @@ When updates are released, they are tagged to indicate what needs rebuilding:
 - `-c` Client update - use `nsuStart` 
 - `-b` Both updated - use `startall`
 
+## Docker Usage
+This is for people with dependancy issues, or would like an "easier" setup.
+
+- Build: ``docker build -t sms-app .``
+- Run: ``docker run -it --rm --name sms-running -p 1337:1337 -p 5823:5823 sms-app``
+- Run (Detatched): ``docker run -d --name sms-running -p 1337:1337 -p 5823:5823 sms-app``
+
 ### Warning
 
 This service is **NOT** intended to be publicly available on your server. Please make sure ports 1337 and 5823 are not reachable from the internet.
