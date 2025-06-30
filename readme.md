@@ -102,8 +102,10 @@ When updates are released, they are tagged to indicate what needs rebuilding:
 This is for people with dependancy issues, or would like an "easier" setup.
 
 - Build: ``docker build -t sms-app .``
-- Run: ``docker run -it --rm --name sms-running -p 1337:1337 -p 5823:5823 sms-app``
-- Run (Detatched): ``docker run -d --name sms-running -p 1337:1337 -p 5823:5823 sms-app``
+- Run (Unix): ``docker run -it --rm --name sms-running -p 1337:1337 -p 5823:5823 --add-host="$(hostname):127.0.0.1" sms-app``
+- Run (Powershell): ``docker run -it --rm --name sms-running -p 1337:1337 -p 5823:5823 --add-host="$env:COMPUTERNAME:127.0.0.1" sms-app``
+- Run (Detatched, Unix): ``docker run -d --name sms-running -p 1337:1337 -p 5823:5823 sms-app``
+- Run (Detatched, Powershell): ``docker run -d --name sms-running -p 1337:1337 -p 5823:5823 --add-host="$env:COMPUTERNAME:127.0.0.1" sms-app``
 
 ### Warning
 
