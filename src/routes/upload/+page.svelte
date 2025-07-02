@@ -92,7 +92,11 @@
 	}
 
 	function getLink(fileName: string) {
-		return configState.server.domain + '/SMS/uploads/' + fileName;
+		if (enablePath) {
+			return configState.server.domain + '/SMS/uploads/' + uploadPath + '/' + fileName;
+		} else {
+			return configState.server.domain + '/SMS/uploads/' + fileName;
+		}
 	}
 
 	async function copyToClipboard(text: string) {
