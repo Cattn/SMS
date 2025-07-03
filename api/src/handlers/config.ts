@@ -20,6 +20,7 @@ interface Config {
 	};
 	server: {
 		domain: string;
+		fileServingEnabled: boolean;
 	};
 }
 
@@ -42,7 +43,8 @@ const defaultConfig: Config = {
 		showFileSize: true
 	},
 	server: {
-		domain: ''
+		domain: '',
+		fileServingEnabled: false
 	}
 };
 
@@ -61,6 +63,8 @@ function readConfig(): Config {
 		return defaultConfig;
 	}
 }
+
+export { readConfig };
 
 function writeConfig(config: Config): boolean {
 	try {

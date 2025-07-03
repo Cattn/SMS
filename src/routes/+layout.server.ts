@@ -27,7 +27,8 @@ export const load: LayoutServerLoad = async ({ fetch, url }) => {
 				showFileSize: true
 			},
 			server: {
-				domain: ''
+				domain: '',
+				fileServingEnabled: false
 			},
 			system: {
 				version: '1.0.0',

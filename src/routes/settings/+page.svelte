@@ -12,6 +12,7 @@
 	let autoCopyLinks = $derived(configState.upload.autoCopyLinks);
 	let showFileSize = $derived(configState.display.showFileSize);
 	let domain = $derived(configState.server.domain);
+	let fileServingEnabled = $derived(configState.server.fileServingEnabled);
 	let systemInfo = $derived(
 		configState.system || {
 			version: '0.0.1',
@@ -38,7 +39,7 @@
 				general: { darkModeEnabled },
 				upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 				display: { showFileSize },
-				server: { domain }
+				server: { domain, fileServingEnabled }
 			};
 
 			const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/config`, {
@@ -50,7 +51,6 @@
 			});
 
 			if (response.ok) {
-				// Update global config state after successful save
 				updateConfig(config);
 				snackbar.show({ message: 'Settings saved successfully!', closable: true });
 			} else {
@@ -70,7 +70,7 @@
 				general: { darkModeEnabled: false },
 				upload: { defaultExpirationEnabled: false, defaultExpiration: '1h', autoCopyLinks: true },
 				display: { showFileSize: true },
-				server: { domain: '' }
+				server: { domain: '', fileServingEnabled: false }
 			};
 
 			updateConfig(defaultConfig);
@@ -83,7 +83,7 @@
 			general: { darkModeEnabled },
 			upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 			display: { showFileSize },
-			server: { domain }
+			server: { domain, fileServingEnabled }
 		};
 
 		const blob = new Blob([JSON.stringify(settings, null, 2)], { type: 'application/json' });
@@ -122,7 +122,8 @@
 								showFileSize: settings.display?.showFileSize ?? true
 							},
 							server: {
-								domain: settings.server?.domain ?? ''
+								domain: settings.server?.domain ?? '',
+								fileServingEnabled: settings.server?.fileServingEnabled ?? false
 							}
 						};
 
@@ -187,6 +188,14 @@
 		updateConfig({
 			...configState,
 			server: { ...configState.server, domain: target.value }
+		});
+	}
+
+	function updateFileServingEnabled(e: Event) {
+		const target = e.target as HTMLInputElement;
+		updateConfig({
+			...configState,
+			server: { ...configState.server, fileServingEnabled: target.checked }
 		});
 	}
 </script>
@@ -437,6 +446,18 @@
 						placeholder=""
 						class="bg-surface border-outline text-on-surface focus:ring-primary focus:border-primary w-full rounded-md border px-3 py-2 focus:ring-1"
 					/>
+				</div>
+
+				<div class="bg-surface-variant flex items-center justify-between rounded-2xl p-4">
+					<div>
+						<h3 class="text-on-surface font-medium">File Serving</h3>
+						<p class="text-on-surface-variant text-sm">
+							Serve uploaded files on port 3000 (requires restart)
+						</p>
+					</div>
+					<label>
+						<Switch checked={fileServingEnabled} onchange={updateFileServingEnabled} />
+					</label>
 				</div>
 			</div>
 		</div>

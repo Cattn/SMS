@@ -12,6 +12,7 @@ interface ConfigType {
 	};
 	server: {
 		domain: string;
+		fileServingEnabled: boolean;
 	};
 	system?: {
 		version: string;
@@ -33,7 +34,8 @@ const defaultConfig: ConfigType = {
 		showFileSize: true
 	},
 	server: {
-		domain: ''
+		domain: '',
+		fileServingEnabled: false
 	},
 	system: {
 		version: '1.0.0',
