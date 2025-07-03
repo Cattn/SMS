@@ -1,0 +1,17 @@
+name: sms
+services:
+  sms-app:
+    build: .
+    container_name: sms-app
+    stdin_open: true
+    tty: true
+    ports:
+      - "1337:1337"
+      - "5823:5823"
+      - "3000:3000"
+    volumes:
+      - ./uploads:/usr/src/app/uploads
+      - ./api/data:/usr/src/app/api/data
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
+    restart: unless-stopped 
