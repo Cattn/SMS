@@ -10,10 +10,26 @@
 
 	let snackbar: ReturnType<typeof Snackbar>;
 	let createFolderDialog = $state({ open: false, folderName: '' });
+	const generateRandomColor = () => {
+		const colors = [
+			'#ef4444', '#f97316', '#f59e0b', '#eab308', '#84cc16', 
+			'#22c55e', '#10b981', '#14b8a6', '#06b6d4', '#0ea5e9', 
+			'#3b82f6', '#6366f1', '#8b5cf6', '#a855f7', '#d946ef', 
+			'#ec4899', '#f43f5e'
+		];
+		return colors[Math.floor(Math.random() * colors.length)];
+	};
+
+	let createTagDialog = $state({ open: false, tagName: '', tagColor: generateRandomColor() });
+	let manageTagsDialog = $state({ open: false });
+	let tagMenus = $state<{ [key: string]: boolean }>({});
+	let itemTags = $state<{ [key: string]: any[] }>({});
+	let searchQuery = $state('');
 
 	let folderTree = $derived(data.folderTree);
 	let allFiles = $derived(data.files);
 	let currentPath = $derived(data.currentPath);
+	let allTags = $derived((data as any).tags || []);
 
 	let folders = $derived.by(() => {
 		const flattenFolders = (folders: any[], parentPath = ''): any[] => {
@@ -30,6 +46,28 @@
 	});
 
 	let files = $derived(allFiles);
+
+	let filteredContent = $derived.by(() => {
+		if (!searchQuery.trim()) {
+			return { folders, files };
+		}
+
+		const query = searchQuery.toLowerCase();
+		const filteredFolders = folders.filter((folder: any) => 
+			folder.name.toLowerCase().includes(query) ||
+			(itemTags[`folder-${folder.relative_path}`] || []).some((tag: any) => 
+				tag.name.toLowerCase().includes(query)
+			)
+		);
+		const filteredFiles = files.filter((file: any) => 
+			file.name.toLowerCase().includes(query) ||
+			(itemTags[`file-${file.relative_path}`] || []).some((tag: any) => 
+				tag.name.toLowerCase().includes(query)
+			)
+		);
+
+		return { folders: filteredFolders, files: filteredFiles };
+	});
 
 	const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp', '.svg'];
 	const videoExtensions = ['.mp4', '.mov', '.avi', '.mkv', '.webm', '.flv', '.wmv', '.m4v'];
@@ -99,6 +137,148 @@
 		}
 	};
 
+	const createTag = async () => {
+		if (!createTagDialog.tagName.trim()) {
+			snackbar.show({ message: 'Tag name is required', closable: true });
+			return;
+		}
+
+		try {
+			const response = await fetch('http://' + page.url.hostname + ':5823/api/tags', {
+				method: 'POST',
+				headers: { 'Content-Type': 'application/json' },
+				body: JSON.stringify({
+					name: createTagDialog.tagName,
+					color: createTagDialog.tagColor
+				})
+			});
+
+			if (response.ok) {
+				snackbar.show({ message: 'Tag created successfully', closable: true });
+				createTagDialog = { open: false, tagName: '', tagColor: generateRandomColor() };
+				manageTagsDialog = { open: false };
+				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { invalidateAll: true });
+			} else {
+				const error = await response.json();
+				snackbar.show({ message: error.error || 'Failed to create tag', closable: true });
+			}
+		} catch (error) {
+			snackbar.show({ message: 'Error creating tag', closable: true });
+		}
+	};
+
+	const loadItemTags = async (itemType: 'file' | 'folder', itemPath: string) => {
+		const key = `${itemType}-${itemPath}`;
+		if (itemTags[key]) return;
+
+		try {
+			const response = await fetch(
+				`http://${page.url.hostname}:5823/api/${itemType}s/${encodeURIComponent(itemPath)}/tags`
+			);
+			if (response.ok) {
+				const data = await response.json();
+				itemTags[key] = data.tags;
+			}
+		} catch (error) {
+			console.error(`Error loading ${itemType} tags:`, error);
+		}
+	};
+
+	const addTagToItem = async (itemType: 'file' | 'folder', itemPath: string, tagId: string) => {
+		try {
+			const response = await fetch(
+				`http://${page.url.hostname}:5823/api/${itemType}s/${encodeURIComponent(itemPath)}/tags`,
+				{
+					method: 'POST',
+					headers: { 'Content-Type': 'application/json' },
+					body: JSON.stringify({ tagId })
+				}
+			);
+
+			if (response.ok) {
+				snackbar.show({ message: 'Tag added successfully', closable: true });
+				
+				const key = `${itemType}-${itemPath}`;
+				const tagToAdd = allTags.find((tag: any) => tag.id === tagId);
+				if (tagToAdd) {
+					if (!itemTags[key]) {
+						itemTags[key] = [];
+					}
+					if (!itemTags[key].some((tag: any) => tag.id === tagId)) {
+						itemTags[key] = [...itemTags[key], tagToAdd];
+					}
+				}
+				
+				tagMenus = {};
+			} else {
+				const error = await response.json();
+				snackbar.show({ message: error.error || 'Failed to add tag', closable: true });
+			}
+		} catch (error) {
+			snackbar.show({ message: 'Error adding tag', closable: true });
+		}
+	};
+
+	const removeTagFromItem = async (itemType: 'file' | 'folder', itemPath: string, tagId: string) => {
+		try {
+			const response = await fetch(
+				`http://${page.url.hostname}:5823/api/${itemType}s/${encodeURIComponent(itemPath)}/tags/${tagId}`,
+				{ method: 'DELETE' }
+			);
+
+			if (response.ok) {
+				snackbar.show({ message: 'Tag removed successfully', closable: true });
+				
+				const key = `${itemType}-${itemPath}`;
+				if (itemTags[key]) {
+					itemTags[key] = itemTags[key].filter((tag: any) => tag.id !== tagId);
+				}
+			} else {
+				const error = await response.json();
+				snackbar.show({ message: error.error || 'Failed to remove tag', closable: true });
+			}
+		} catch (error) {
+			snackbar.show({ message: 'Error removing tag', closable: true });
+		}
+	};
+
+	const deleteTag = async (tagId: string) => {
+		try {
+			const response = await fetch(`http://${page.url.hostname}:5823/api/tags/${tagId}`, {
+				method: 'DELETE'
+			});
+
+			if (response.ok) {
+				snackbar.show({ message: 'Tag deleted successfully', closable: true });
+				manageTagsDialog = { open: false };
+				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { invalidateAll: true });
+			} else {
+				const error = await response.json();
+				snackbar.show({ message: error.error || 'Failed to delete tag', closable: true });
+			}
+		} catch (error) {
+			snackbar.show({ message: 'Error deleting tag', closable: true });
+		}
+	};
+
+	const getTagUsage = async (tagId: string) => {
+		try {
+			const tagName = allTags.find((tag: any) => tag.id === tagId)?.name || '';
+			const response = await fetch(`http://${page.url.hostname}:5823/api/search/tags?tags=${encodeURIComponent(tagName)}`);
+
+			if (response.ok) {
+				const data = await response.json();
+				return {
+					files: data.files?.length || 0,
+					folders: data.folders?.length || 0
+				};
+			}
+		} catch (error) {
+			console.error('Error getting tag usage:', error);
+		}
+		return { files: 0, folders: 0 };
+	};
+
 	const copyFileLink = async (file: any) => {
 		const link = configState.server.domain + '/SMS/uploads/' + file.relative_path;
 		try {
@@ -128,26 +308,49 @@
 			}
 		}
 	};
+
+	$effect(() => {
+		folders.forEach((folder: any) => loadItemTags('folder', folder.relative_path));
+		files.forEach((file: any) => loadItemTags('file', file.relative_path));
+	});
+
+
 </script>
 
 <div class="mt-12 ml-32">
-	<div class="mb-6 flex flex-col gap-4 pr-10 md:flex-row md:items-center md:justify-between">
+	<div class="mb-3 flex flex-col gap-4 pr-10 md:flex-row md:items-center md:justify-between">
 		<h1 class="text-4xl font-bold">Browse Files</h1>
-		<Button variant="filled" onclick={() => (createFolderDialog = { open: true, folderName: '' })}>
-			<svg
-				xmlns="http://www.w3.org/2000/svg"
-				width="20"
-				height="20"
-				viewBox="0 0 24 24"
-				class="mr-2"
-			>
-				<path
-					fill="currentColor"
-					d="M12 2c-.41 0-.75.34-.75.75v8.5h-8.5c-.41 0-.75.34-.75.75s.34.75.75.75h8.5v8.5c0 .41.34.75.75.75s.75-.34.75-.75v-8.5h8.5c.41 0 .75-.34.75-.75s-.34-.75-.75-.75h-8.5v-8.5c0-.41-.34-.75-.75-.75z"
-				/>
-			</svg>
-			New Folder
-		</Button>
+		<div class="flex gap-2">
+			<Button variant="outlined" onclick={() => (createTagDialog = { open: true, tagName: '', tagColor: generateRandomColor() })}>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9 16l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T6.3 18.8L7 16H4.275q-.5 0-.8-.387T3.3 14.75q.075-.35.35-.55t.625-.2H7.5l1-4H5.775q-.5 0-.8-.387T4.8 8.75q.075-.35.35-.55t.625-.2H9l.825-3.275Q9.9 4.4 10.15 4.2t.6-.2q.475 0 .775.375t.175.825L11 8h4l.825-3.275q.075-.325.325-.525t.6-.2q.475 0 .775.375t.175.825L17 8h2.725q.5 0 .8.387t.175.863q-.075.35-.35.55t-.625.2H16.5l-1 4h2.725q.5 0 .8.388t.175.862q-.075.35-.35.55t-.625.2H15l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T12.3 18.8L13 16zm.5-2h4l1-4h-4z"/></svg>
+				New Tag
+			</Button>
+			<Button variant="filled" onclick={() => (createFolderDialog = { open: true, folderName: '' })}>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+					<path fill="currentColor" d="M12 2c-.41 0-.75.34-.75.75v8.5h-8.5c-.41 0-.75.34-.75.75s.34.75.75.75h8.5v8.5c0 .41.34.75.75.75s.75-.34.75-.75v-8.5h8.5c.41 0 .75-.34.75-.75s-.34-.75-.75-.75h-8.5v-8.5c0-.41-.34-.75-.75-.75z"/>
+				</svg>
+				New Folder
+			</Button>
+		</div>
+	</div>
+	<div class="mb-3 md:mb-3 flex flex-col gap-4 pr-10 md:flex-row md:items-center md:justify-end">
+		<div class="flex gap-2">
+			<Button variant="text" onclick={() => (manageTagsDialog = { open: true })}>
+				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+					<path fill="currentColor" d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/>
+				</svg>
+				Manage Tags
+			</Button>
+		</div>
+	</div>
+
+	<div class="mb-6 pr-10">
+		<input
+				type="text"
+				bind:value={searchQuery}
+				placeholder="Search files, folders, and tags..."
+				class="bg-surface border-outline text-on-surface focus:ring-primary focus:border-primary w-full rounded-md border px-3 py-2 focus:ring-1"
+			/>
 	</div>
 
 	{#if breadcrumbs.length > 0 || currentPath}
@@ -203,11 +406,11 @@
 		</div>
 	{/if}
 
-	{#if folders.length > 0}
+	{#if filteredContent.folders.length > 0}
 		<section class="mr-10 mb-8">
 			<h2 class="mb-4 text-2xl font-semibold">Folders</h2>
 			<div class="space-y-2">
-				{#each folders as folder}
+				{#each filteredContent.folders as folder}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
@@ -243,10 +446,61 @@
 										day: 'numeric'
 									})}
 								</p>
+								{#if itemTags[`folder-${folder.relative_path}`]?.length > 0}
+									<div class="flex flex-wrap gap-1 mt-1">
+										{#each itemTags[`folder-${folder.relative_path}`] as tag}
+											<!-- svelte-ignore a11y_click_events_have_key_events -->
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<div onclick={(e) => e.stopPropagation()}>
+												<Chip
+													variant="assist"
+													style="background-color: {tag.color}20; color: {tag.color};"
+													click={() => removeTagFromItem('folder', folder.relative_path, tag.id)}
+												>
+													{tag.name}
+												</Chip>
+											</div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						</div>
 
 						<div class="flex justify-end gap-2">
+							<div class="relative">
+								<Button 
+									variant="text"
+									onclick={() => {
+										const key = `folder-${folder.relative_path}`;
+										const wasOpen = tagMenus[key];
+										tagMenus = {};
+										if (!wasOpen) {
+											tagMenus[key] = true;
+										}
+									}}
+								>
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9 16l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T6.3 18.8L7 16H4.275q-.5 0-.8-.387T3.3 14.75q.075-.35.35-.55t.625-.2H7.5l1-4H5.775q-.5 0-.8-.387T4.8 8.75q.075-.35.35-.55t.625-.2H9l.825-3.275Q9.9 4.4 10.15 4.2t.6-.2q.475 0 .775.375t.175.825L11 8h4l.825-3.275q.075-.325.325-.525t.6-.2q.475 0 .775.375t.175.825L17 8h2.725q.5 0 .8.387t.175.863q-.075.35-.35.55t-.625.2H16.5l-1 4h2.725q.5 0 .8.388t.175.862q-.075.35-.35.55t-.625.2H15l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T12.3 18.8L13 16zm.5-2h4l1-4h-4z"/></svg>
+								</Button>
+								{#if tagMenus[`folder-${folder.relative_path}`]}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div 
+										class="tag-menu-popup absolute top-full right-0 mt-1 bg-surface border rounded-lg shadow-lg p-2 z-10 min-w-48"
+										onclick={(e) => e.stopPropagation()}
+									>
+										<div class="max-h-40 overflow-y-auto">
+											{#each allTags as tag}
+												<button
+													class="w-full text-left px-2 py-1 hover:bg-on-surface-variant hover:text-secondary-container rounded text-sm"
+													onclick={() => addTagToItem('folder', folder.relative_path, tag.id)}
+												>
+													<span style="color: {tag.color};">●</span> {tag.name}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
 							<form
 								method="POST"
 								action="?/toggleExclusion"
@@ -345,11 +599,11 @@
 		</section>
 	{/if}
 
-	{#if files.length > 0}
+	{#if filteredContent.files.length > 0}
 		<section class="mr-10 mb-20">
 			<h2 class="mb-4 text-2xl font-semibold">Files</h2>
 			<div class="space-y-2">
-				{#each files as file}
+				{#each filteredContent.files as file}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
 					<!-- svelte-ignore a11y_no_static_element_interactions -->
 					<div
@@ -409,10 +663,61 @@
 								{#if configState.display.showFileSize}
 									<span class="text-xs text-gray-500">{formatFileSize(file.size)}</span>
 								{/if}
+								{#if itemTags[`file-${file.relative_path}`]?.length > 0}
+									<div class="flex flex-wrap gap-1 mt-1">
+										{#each itemTags[`file-${file.relative_path}`] as tag}
+											<!-- svelte-ignore a11y_click_events_have_key_events -->
+											<!-- svelte-ignore a11y_no_static_element_interactions -->
+											<div onclick={(e) => e.stopPropagation()}>
+												<Chip
+													variant="assist"
+													style="background-color: {tag.color}20; color: {tag.color};"
+													click={() => removeTagFromItem('file', file.relative_path, tag.id)}
+												>
+													{tag.name}
+												</Chip>
+											</div>
+										{/each}
+									</div>
+								{/if}
 							</div>
 						</div>
 
 						<div class="flex gap-2">
+							<div class="relative">
+								<Button 
+									variant="text"
+									onclick={() => {
+										const key = `file-${file.relative_path}`;
+										const wasOpen = tagMenus[key];
+										tagMenus = {};
+										if (!wasOpen) {
+											tagMenus[key] = true;
+										}
+									}}
+								>
+								<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9 16l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T6.3 18.8L7 16H4.275q-.5 0-.8-.387T3.3 14.75q.075-.35.35-.55t.625-.2H7.5l1-4H5.775q-.5 0-.8-.387T4.8 8.75q.075-.35.35-.55t.625-.2H9l.825-3.275Q9.9 4.4 10.15 4.2t.6-.2q.475 0 .775.375t.175.825L11 8h4l.825-3.275q.075-.325.325-.525t.6-.2q.475 0 .775.375t.175.825L17 8h2.725q.5 0 .8.387t.175.863q-.075.35-.35.55t-.625.2H16.5l-1 4h2.725q.5 0 .8.388t.175.862q-.075.35-.35.55t-.625.2H15l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T12.3 18.8L13 16zm.5-2h4l1-4h-4z"/></svg>
+								</Button>
+								{#if tagMenus[`file-${file.relative_path}`]}
+									<!-- svelte-ignore a11y_click_events_have_key_events -->
+									<!-- svelte-ignore a11y_no_static_element_interactions -->
+									<div 
+										class="tag-menu-popup absolute top-full right-0 mt-1 bg-surface border rounded-lg shadow-lg p-2 z-10 min-w-48"
+										onclick={(e) => e.stopPropagation()}
+									>
+										<div class="max-h-40 overflow-y-auto">
+											{#each allTags as tag}
+												<button
+													class="w-full text-left px-2 py-1 hover:bg-on-surface-variant hover:text-secondary-container rounded text-sm"
+													onclick={() => addTagToItem('file', file.relative_path, tag.id)}
+												>
+													<span style="color: {tag.color};">●</span> {tag.name}
+												</button>
+											{/each}
+										</div>
+									</div>
+								{/if}
+							</div>
 							<Button variant="outlined" onclick={() => copyFileLink(file)}>Copy Link</Button>
 							<Button
 								variant="tonal"
@@ -426,7 +731,7 @@
 		</section>
 	{/if}
 
-	{#if folders.length === 0 && files.length === 0}
+	{#if filteredContent.folders.length === 0 && filteredContent.files.length === 0}
 		<div class="mr-10 py-12 text-center">
 			<div
 				class="bg-surface-variant mx-auto mb-4 flex h-24 w-24 items-center justify-center rounded-full"
@@ -488,6 +793,142 @@
 					Cancel
 				</Button>
 				<Button variant="filled" onclick={createFolder}>Create</Button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if createTagDialog.open}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="bg-scrim/50 fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-out"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) {
+				createTagDialog = { open: false, tagName: '', tagColor: generateRandomColor() };
+			}
+		}}
+	>
+		<div
+			class="bg-surface-container-high mx-4 w-full max-w-sm scale-100 transform rounded-3xl shadow-lg transition-all duration-200 ease-out"
+		>
+			<div class="px-6 pt-6 pb-4">
+				<h2 class="text-on-surface text-xl font-medium">Create New Tag</h2>
+			</div>
+
+			<div class="w-max px-6 pb-4">
+				<TextField
+					bind:value={createTagDialog.tagName}
+					label="Tag name"
+					onkeydown={(e) => {
+						if (e.key === 'Enter') {
+							createTag();
+						}
+					}}
+				/>
+			</div>
+
+			<div class="flex justify-end gap-2 px-6 pb-6">
+				<Button
+					variant="text"
+					onclick={() => (createTagDialog = { open: false, tagName: '', tagColor: generateRandomColor() })}
+				>
+					Cancel
+				</Button>
+				<Button variant="filled" onclick={createTag}>Create</Button>
+			</div>
+		</div>
+	</div>
+{/if}
+
+{#if manageTagsDialog.open}
+	<!-- svelte-ignore a11y_click_events_have_key_events -->
+	<!-- svelte-ignore a11y_no_static_element_interactions -->
+	<div
+		class="bg-scrim/50 fixed inset-0 z-50 flex items-center justify-center p-4 transition-opacity duration-200 ease-out"
+		onclick={(e) => {
+			if (e.target === e.currentTarget) {
+				manageTagsDialog = { open: false };
+			}
+		}}
+	>
+		<div
+			class="bg-surface-container-high mx-4 w-full max-w-2xl scale-100 transform rounded-3xl shadow-lg transition-all duration-200 ease-out"
+		>
+			<div class="px-6 pt-6 pb-4">
+				<h2 class="text-on-surface text-xl font-medium">Manage Tags</h2>
+				<p class="text-on-surface-variant text-sm mt-1">View and manage all tags in your system</p>
+			</div>
+
+			<div class="px-6 pb-4 max-h-96 overflow-y-auto">
+				{#if allTags.length > 0}
+					<div class="space-y-2">
+						{#each allTags as tag}
+							<div class="flex items-center justify-between p-3 rounded-lg border">
+								<div class="flex items-center gap-3">
+									<div 
+										class="w-4 h-4 rounded-full"
+										style="background-color: {tag.color};"
+									></div>
+									<div>
+										<span class="font-medium">{tag.name}</span>
+										<p class="text-xs text-gray-500">
+											Created {new Date(tag.created_at).toLocaleDateString()}
+										</p>
+									</div>
+								</div>
+								
+								<div class="flex items-center gap-2">
+									<Button
+										variant="outlined"
+										onclick={async () => {
+											const usage = await getTagUsage(tag.id);
+											const totalUsage = usage.files + usage.folders;
+											if (totalUsage > 0) {
+												if (confirm(`This tag is used on ${totalUsage} item(s). Are you sure you want to delete it?`)) {
+													deleteTag(tag.id);
+												}
+											} else {
+												if (confirm(`Are you sure you want to delete the tag "${tag.name}"?`)) {
+													deleteTag(tag.id);
+												}
+											}
+										}}
+									>
+										<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24">
+											<path fill="currentColor" d="M7 21q-.825 0-1.412-.587T5 19V6q-.425 0-.712-.288T4 5t.288-.712T5 4h4q0-.425.288-.712T10 3h4q.425 0 .713.288T15 4h4q.425 0 .713.288T20 5t-.288.713T19 6v13q0 .825-.587 1.413T17 21zm3-4q.425 0 .713-.288T11 16V9q0-.425-.288-.712T10 8t-.712.288T9 9v7q0 .425.288.713T10 17m4 0q.425 0 .713-.288T15 16V9q0-.425-.288-.712T14 8t-.712.288T13 9v7q0 .425.288.713T14 17"/>
+										</svg>
+									</Button>
+								</div>
+							</div>
+						{/each}
+					</div>
+				{:else}
+					<div class="text-center py-8">
+						<div class="bg-surface-variant mx-auto mb-4 flex h-16 w-16 items-center justify-center rounded-full">
+							<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" class="text-on-surface-variant">
+								<path fill="currentColor" d="M5.5 7A1.5 1.5 0 0 0 4 8.5v7A1.5 1.5 0 0 0 5.5 17h13a1.5 1.5 0 0 0 1.5-1.5v-7A1.5 1.5 0 0 0 18.5 7h-13Z"/>
+							</svg>
+						</div>
+						<h3 class="text-on-surface text-lg font-medium">No tags yet</h3>
+						<p class="text-on-surface-variant">Create your first tag to get started</p>
+					</div>
+				{/if}
+			</div>
+
+			<div class="flex justify-between px-6 pb-6">
+				<Button variant="text" onclick={() => {
+					createTagDialog = { open: true, tagName: '', tagColor: generateRandomColor() };
+					manageTagsDialog = { open: false };
+				}}>
+					<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
+						<path fill="currentColor" d="M12 2c-.41 0-.75.34-.75.75v8.5h-8.5c-.41 0-.75.34-.75.75s.34.75.75.75h8.5v8.5c0 .41.34.75.75.75s.75-.34.75-.75v-8.5h8.5c.41 0 .75-.34.75-.75s-.34-.75-.75-.75h-8.5v-8.5c0-.41-.34-.75-.75-.75z"/>
+					</svg>
+					New Tag
+				</Button>
+				<Button variant="filled" onclick={() => (manageTagsDialog = { open: false })}>
+					Close
+				</Button>
 			</div>
 		</div>
 	</div>
