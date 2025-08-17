@@ -51,6 +51,7 @@
 		"webpack-cli": "^6.0.1"
 	},
 	"dependencies": {
+		"@ktibow/material-color-utilities-nightly": "^0.3.11755307340811",
 		"@sveltejs/adapter-node": "^5.2.12",
 		"@types/express": "^5.0.3",
 		"@types/express-fileupload": "^1.5.1",
@@ -61,6 +62,7 @@
 		"m3-svelte": "^4.4.0",
 		"retimer": "^4.0.0",
 		"sqlite3": "^5.1.7",
+		"svelte-awesome-color-picker": "^4.0.2",
 		"webpack": "^5.99.9"
 	}
 }

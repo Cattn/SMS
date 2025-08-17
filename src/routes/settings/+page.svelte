@@ -1,12 +1,13 @@
 <script lang="ts">
 	import { Button, Switch, Snackbar } from 'm3-svelte';
-	import { page } from '$app/state';
 	import { configState, updateConfig } from '$lib/config.svelte';
-
+	import { setDarkMode, getIsDark, getSourceColor, setThemeFromSourceColor } from '$lib/theme/store.svelte';
+	import ThemeGenerator from '$lib/components/ThemeGenerator.svelte';
+	
 	let snackbar: ReturnType<typeof Snackbar>;
 
 	// Use reactive getters to access global config state
-	let darkModeEnabled = $derived(configState.general.darkModeEnabled);
+	let darkModeEnabled = $derived(getIsDark());
 	let defaultExpirationEnabled = $derived(configState.upload.defaultExpirationEnabled);
 	let defaultExpiration = $derived(configState.upload.defaultExpiration);
 	let autoCopyLinks = $derived(configState.upload.autoCopyLinks);
@@ -21,28 +22,38 @@
 		}
 	);
 
-	async function loadSettings() {
-		try {
-			const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/config`);
-			if (response.ok) {
-				const config = await response.json();
-				updateConfig(config);
-			}
-		} catch (error) {
-			console.error('Failed to load settings:', error);
-		}
+	let currentThemeColor = $state(getSourceColor());
+	let pendingThemeColor = $state(getSourceColor());
+	let hasUnsavedThemeChanges = $derived(currentThemeColor !== pendingThemeColor);
+
+	function handleThemeColorChange(hex: string) {
+		pendingThemeColor = hex;
+	}
+
+	function saveThemeColor() {
+		setThemeFromSourceColor(pendingThemeColor);
+		currentThemeColor = pendingThemeColor;
+		snackbar.show({ message: 'Theme color saved successfully!', closable: true });
+	}
+
+	function resetThemeColor() {
+		pendingThemeColor = currentThemeColor;
 	}
 
 	async function saveSettings() {
 		try {
 			const config = {
 				general: { darkModeEnabled },
+				theme: { 
+					sourceColor: configState.theme.sourceColor, 
+					isDarkMode: darkModeEnabled 
+				},
 				upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 				display: { showFileSize },
 				server: { domain, fileServingEnabled }
 			};
 
-			const response = await fetch(`${page.url.protocol}//${page.url.hostname}:5823/api/config`, {
+			const response = await fetch(`${window.location.protocol}//${window.location.hostname}:5823/api/config`, {
 				method: 'PUT',
 				headers: {
 					'Content-Type': 'application/json'
@@ -62,12 +73,11 @@
 		}
 	}
 
-	loadSettings();
-
 	function resetSettings() {
 		if (confirm('Are you sure you want to reset all settings to default values?')) {
 			const defaultConfig = {
-				general: { darkModeEnabled: false },
+				general: { darkModeEnabled: true },
+				theme: { sourceColor: '#8f4a4c', isDarkMode: true },
 				upload: { defaultExpirationEnabled: false, defaultExpiration: '1h', autoCopyLinks: true },
 				display: { showFileSize: true },
 				server: { domain: '', fileServingEnabled: false }
@@ -81,6 +91,10 @@
 	function exportSettings() {
 		const settings = {
 			general: { darkModeEnabled },
+			theme: { 
+				sourceColor: configState.theme.sourceColor, 
+				isDarkMode: darkModeEnabled 
+			},
 			upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 			display: { showFileSize },
 			server: { domain, fileServingEnabled }
@@ -111,7 +125,11 @@
 
 						const newConfig = {
 							general: {
-								darkModeEnabled: settings.general?.darkModeEnabled ?? false
+								darkModeEnabled: settings.general?.darkModeEnabled ?? true
+							},
+							theme: {
+								sourceColor: settings.theme?.sourceColor ?? '#8f4a4c',
+								isDarkMode: settings.theme?.isDarkMode ?? true
 							},
 							upload: {
 								defaultExpirationEnabled: settings.upload?.defaultExpirationEnabled ?? false,
@@ -145,10 +163,8 @@
 	// Helper functions to update individual config values
 	function updateDarkMode(e: Event) {
 		const target = e.target as HTMLInputElement;
-		updateConfig({
-			...configState,
-			general: { ...configState.general, darkModeEnabled: target.checked }
-		});
+		setDarkMode(target.checked);
+		snackbar.show({ message: 'Dark mode setting saved', closable: true });
 	}
 
 	function updateDefaultExpirationEnabled(e: Event) {
@@ -249,21 +265,6 @@
 				</svg>
 				Reset
 			</Button>
-			<Button variant="filled" onclick={saveSettings}>
-				<svg
-					xmlns="http://www.w3.org/2000/svg"
-					width="20"
-					height="20"
-					viewBox="0 0 24 24"
-					class="mr-2"
-				>
-					<path
-						fill="currentColor"
-						d="M17 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14c1.1 0 2-.9 2-2V7l-4-4zm2 16H5V5h11.17L19 7.83V19zm-7-7c-1.66 0-3 1.34-3 3s1.34 3 3 3s3-1.34 3-3s-1.34-3-3-3zM6 6h9v4H6z"
-					/>
-				</svg>
-				Save
-			</Button>
 		</div>
 	</div>
 
@@ -297,6 +298,40 @@
 						<Switch checked={darkModeEnabled} onchange={updateDarkMode} />
 					</label>
 				</div>
+				<ThemeGenerator 
+					initialHex={pendingThemeColor}
+					onColorChange={handleThemeColorChange}
+				/>
+				
+				{#if hasUnsavedThemeChanges}
+					<div class="bg-surface-variant mt-4 flex items-center justify-between rounded-2xl p-4">
+						<div>
+							<h3 class="text-on-surface font-medium">Unsaved Changes</h3>
+							<p class="text-on-surface-variant text-sm">You have unsaved theme color changes</p>
+						</div>
+						<div class="flex gap-2">
+							<Button variant="outlined" onclick={resetThemeColor}>
+								<svg
+									xmlns="http://www.w3.org/2000/svg"
+									width="16"
+									height="16"
+									viewBox="0 0 24 24"
+									class="mr-2"
+								>
+									<path
+										fill="currentColor"
+										d="M12 4V1L8 5l4 4V6c3.31 0 6 2.69 6 6c0 1.01-.25 1.97-.7 2.8l1.46 1.46C19.54 15.03 20 13.57 20 12c0-4.42-3.58-8-8-8zm0 14c-3.31 0-6-2.69-6-6c0-1.01.25-1.97.7-2.8L5.24 7.74C4.46 8.97 4 10.43 4 12c0 4.42 3.58 8 8 8v3l4-4l-4-4v3z"
+									/>
+								</svg>
+								Reset
+							</Button>
+							<Button variant="filled" onclick={saveThemeColor}>
+								<svg xmlns="http://www.w3.org/2000/svg" width="20px" height="20px" viewBox="0 0 24 24"><path fill="currentColor" d="M21 7v12q0 .825-.587 1.413T19 21H5q-.825 0-1.412-.587T3 19V5q0-.825.588-1.412T5 3h12zm-9 11q1.25 0 2.125-.875T15 15t-.875-2.125T12 12t-2.125.875T9 15t.875 2.125T12 18m-6-8h9V6H6z"/></svg>
+								Save Theme
+							</Button>
+						</div>
+					</div>
+				{/if}
 			</div>
 		</div>
 	</section>

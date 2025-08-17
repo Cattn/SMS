@@ -10,6 +10,10 @@ interface Config {
 	general: {
 		darkModeEnabled: boolean;
 	};
+	theme: {
+		sourceColor: string;
+		isDarkMode: boolean;
+	};
 	upload: {
 		defaultExpirationEnabled: boolean;
 		defaultExpiration: string;
@@ -32,7 +36,11 @@ interface SystemInfo {
 
 const defaultConfig: Config = {
 	general: {
-		darkModeEnabled: false
+		darkModeEnabled: true
+	},
+	theme: {
+		sourceColor: '#8f4a4c',
+		isDarkMode: true
 	},
 	upload: {
 		defaultExpirationEnabled: false,
@@ -196,6 +204,7 @@ export const updateConfig = async (req: Request, res: Response): Promise<void> =
 
 		if (
 			!updatedConfig.general ||
+			!updatedConfig.theme ||
 			!updatedConfig.upload ||
 			!updatedConfig.display ||
 			!updatedConfig.server

@@ -16,7 +16,11 @@ export const load: LayoutServerLoad = async ({ fetch, url }) => {
 	return {
 		config: {
 			general: {
-				darkModeEnabled: false
+				darkModeEnabled: true
+			},
+			theme: {
+				sourceColor: '#8f4a4c',
+				isDarkMode: true
 			},
 			upload: {
 				defaultExpirationEnabled: false,

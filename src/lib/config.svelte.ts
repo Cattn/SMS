@@ -2,6 +2,10 @@ interface ConfigType {
 	general: {
 		darkModeEnabled: boolean;
 	};
+	theme: {
+		sourceColor: string;
+		isDarkMode: boolean;
+	};
 	upload: {
 		defaultExpirationEnabled: boolean;
 		defaultExpiration: string;
@@ -23,7 +27,11 @@ interface ConfigType {
 
 const defaultConfig: ConfigType = {
 	general: {
-		darkModeEnabled: false
+		darkModeEnabled: true
+	},
+	theme: {
+		sourceColor: '#8f4a4c',
+		isDarkMode: true
 	},
 	upload: {
 		defaultExpirationEnabled: false,
@@ -52,4 +60,27 @@ export function updateConfig(newConfig: ConfigType) {
 
 export function initializeConfig(initialConfig: ConfigType) {
 	Object.assign(configState, initialConfig);
+}
+
+export async function updateThemeConfig(sourceColor: string, isDarkMode: boolean) {
+	configState.theme.sourceColor = sourceColor;
+	configState.theme.isDarkMode = isDarkMode;
+	
+	if (typeof window === 'undefined') return;
+	
+	try {
+		const response = await fetch(`${window.location.protocol}//${window.location.hostname}:5823/api/config`, {
+			method: 'PUT',
+			headers: {
+				'Content-Type': 'application/json',
+			},
+			body: JSON.stringify(configState),
+		});
+		
+		if (!response.ok) {
+			console.error('Failed to update theme config on server');
+		}
+	} catch (error) {
+		console.error('Error updating theme config:', error);
+	}
 }

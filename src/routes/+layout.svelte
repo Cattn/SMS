@@ -5,12 +5,23 @@
 
 	import SideBar from '$lib/components/SideBar.svelte';
 	import { initializeConfig } from '$lib/config.svelte';
+	import { getCurrentScheme, getIsDark, initializeTheme } from '$lib/theme/store.svelte';
 
 	let { children, data } = $props();
 
 	if (data?.config) {
 		initializeConfig(data.config);
+		initializeTheme();
 	}
+
+	let currentScheme = $derived(getCurrentScheme());
+	let isDark = $derived(getIsDark());
+
+	$effect(() => {
+		if (typeof document !== 'undefined') {
+			document.documentElement.classList.toggle('dark', isDark);
+		}
+	});
 </script>
 
 <SideBar />
