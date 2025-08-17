@@ -46,7 +46,8 @@
 				general: { darkModeEnabled },
 				theme: { 
 					sourceColor: configState.theme.sourceColor, 
-					isDarkMode: darkModeEnabled 
+					isDarkMode: darkModeEnabled,
+					schemeType: configState.theme.schemeType
 				},
 				upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 				display: { showFileSize },
@@ -77,7 +78,7 @@
 		if (confirm('Are you sure you want to reset all settings to default values?')) {
 			const defaultConfig = {
 				general: { darkModeEnabled: true },
-				theme: { sourceColor: '#8f4a4c', isDarkMode: true },
+				theme: { sourceColor: '#8f4a4c', isDarkMode: true, schemeType: 'vibrant' as const },
 				upload: { defaultExpirationEnabled: false, defaultExpiration: '1h', autoCopyLinks: true },
 				display: { showFileSize: true },
 				server: { domain: '', fileServingEnabled: false }
@@ -93,7 +94,8 @@
 			general: { darkModeEnabled },
 			theme: { 
 				sourceColor: configState.theme.sourceColor, 
-				isDarkMode: darkModeEnabled 
+				isDarkMode: darkModeEnabled,
+				schemeType: configState.theme.schemeType
 			},
 			upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 			display: { showFileSize },
@@ -129,7 +131,8 @@
 							},
 							theme: {
 								sourceColor: settings.theme?.sourceColor ?? '#8f4a4c',
-								isDarkMode: settings.theme?.isDarkMode ?? true
+								isDarkMode: settings.theme?.isDarkMode ?? true,
+								schemeType: settings.theme?.schemeType ?? 'vibrant'
 							},
 							upload: {
 								defaultExpirationEnabled: settings.upload?.defaultExpirationEnabled ?? false,

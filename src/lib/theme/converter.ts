@@ -1,5 +1,5 @@
 import type { ColorScheme } from "./types";
-import type { SchemeTonalSpot } from "@ktibow/material-color-utilities-nightly";
+import type { SchemeVibrant, SchemeTonalSpot } from "@ktibow/material-color-utilities-nightly";
 import { redFromArgb, greenFromArgb, blueFromArgb, alphaFromArgb } from "@ktibow/material-color-utilities-nightly";
 
 function argbToRgbString(argb: number): string {
@@ -55,7 +55,7 @@ export function removeAlphaFromHex(hex: string): string {
     return hex;
 }
 
-export function convertToM3Theme(scheme: SchemeTonalSpot): ColorScheme {
+export function convertToM3Theme(scheme: SchemeVibrant | SchemeTonalSpot): ColorScheme {
     return {
         primary: argbToRgbString(scheme.primary),
         surfaceTint: argbToRgbString(scheme.surfaceTint),

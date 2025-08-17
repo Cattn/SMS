@@ -5,6 +5,7 @@ interface ConfigType {
 	theme: {
 		sourceColor: string;
 		isDarkMode: boolean;
+		schemeType: 'vibrant' | 'tonal';
 	};
 	upload: {
 		defaultExpirationEnabled: boolean;
@@ -31,7 +32,8 @@ const defaultConfig: ConfigType = {
 	},
 	theme: {
 		sourceColor: '#8f4a4c',
-		isDarkMode: true
+		isDarkMode: true,
+		schemeType: 'vibrant'
 	},
 	upload: {
 		defaultExpirationEnabled: false,

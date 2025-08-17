@@ -13,6 +13,7 @@ interface Config {
 	theme: {
 		sourceColor: string;
 		isDarkMode: boolean;
+		schemeType: 'vibrant' | 'tonal';
 	};
 	upload: {
 		defaultExpirationEnabled: boolean;
@@ -40,7 +41,8 @@ const defaultConfig: Config = {
 	},
 	theme: {
 		sourceColor: '#8f4a4c',
-		isDarkMode: true
+		isDarkMode: true,
+		schemeType: 'vibrant'
 	},
 	upload: {
 		defaultExpirationEnabled: false,

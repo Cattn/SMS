@@ -1,5 +1,5 @@
 import type { M3Theme, ColorScheme } from './types';
-import { generateM3Theme } from './generator';
+import { generateM3Theme, type SchemeType } from './generator';
 import { removeAlphaFromHex } from './converter';
 import { browser } from '$app/environment';
 import { configState, updateThemeConfig } from '$lib/config.svelte';
@@ -52,7 +52,7 @@ export function setThemeFromSourceColor(sourceColor: string): void {
     const defaultColorRgb = removeAlphaFromHex(DEFAULT_SOURCE_COLOR);
     
     if (sourceColorRgb !== defaultColorRgb) {
-        themeState.currentTheme = generateM3Theme(sourceColor);
+        themeState.currentTheme = generateM3Theme(sourceColor, configState.theme.schemeType);
         if (currentScheme) {
             applySchemeToCSS(currentScheme);
         }
@@ -104,6 +104,23 @@ export function getSourceColor(): string {
     return themeState.sourceColor;
 }
 
+export function getSchemeType(): SchemeType {
+    return configState.theme.schemeType;
+}
+
+export function setSchemeType(schemeType: SchemeType): void {
+    configState.theme.schemeType = schemeType;
+    
+    if (shouldUseM3Theme()) {
+        themeState.currentTheme = generateM3Theme(themeState.sourceColor, schemeType);
+        if (currentScheme) {
+            applySchemeToCSS(currentScheme);
+        }
+    }
+    
+    updateThemeConfig(themeState.sourceColor, themeState.isDark);
+}
+
 export function initializeTheme(): void {
     themeState.sourceColor = configState.theme.sourceColor;
     themeState.isDark = configState.general.darkModeEnabled;
@@ -112,7 +129,7 @@ export function initializeTheme(): void {
     const defaultColorRgb = removeAlphaFromHex(DEFAULT_SOURCE_COLOR);
     
     if (sourceColorRgb !== defaultColorRgb) {
-        themeState.currentTheme = generateM3Theme(configState.theme.sourceColor);
+        themeState.currentTheme = generateM3Theme(configState.theme.sourceColor, configState.theme.schemeType);
         
         if (currentScheme) {
             applySchemeToCSS(currentScheme);

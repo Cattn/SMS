@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ColorPicker, { ChromeVariant } from 'svelte-awesome-color-picker';
-    import { generateM3Theme } from '$lib/theme/generator';
-    import { getSourceColor } from '$lib/theme/store.svelte';
+    import { generateM3Theme, type SchemeType } from '$lib/theme/generator';
+    import { getSourceColor, getSchemeType, setSchemeType } from '$lib/theme/store.svelte';
 
     let { 
         initialHex = getSourceColor(),
@@ -9,7 +9,8 @@
     } = $props();
 
     let hex = $state(initialHex);
-    let theme = $derived(generateM3Theme(hex));
+    let schemeType = $state<SchemeType>(getSchemeType());
+    let theme = $derived(generateM3Theme(hex, schemeType));
     let isUserInteracting = $state(false);
     let debounceTimer: ReturnType<typeof setTimeout> | undefined;
 
@@ -29,10 +30,21 @@
         }
     }
 
+    function handleSchemeTypeChange(event: Event) {
+        const target = event.target as HTMLSelectElement;
+        const newSchemeType = target.value as SchemeType;
+        schemeType = newSchemeType;
+        setSchemeType(newSchemeType);
+    }
+
         $effect(() => {
         if (!isUserInteracting) {
             hex = initialHex;
         }
+    });
+
+    $effect(() => {
+        schemeType = getSchemeType();
     });
 
     $effect(() => {
@@ -56,6 +68,23 @@
                 style="background-color: {hex};"
             ></div>
             <span class="text-on-surface text-sm font-mono">{hex.toUpperCase().slice(0, 7)}</span>
+        </div>
+    </div>
+
+    <div class="mb-4 bg-surface-variant rounded-2xl p-4">
+        <div class="flex items-center justify-between">
+            <div>
+                <h3 class="text-on-surface font-medium">Color Scheme</h3>
+                <p class="text-on-surface-variant text-sm">Choose between vibrant or tonal color generation</p>
+            </div>
+            <select 
+                bind:value={schemeType}
+                onchange={handleSchemeTypeChange}
+                class="bg-surface border-outline text-on-surface focus:ring-primary focus:border-primary rounded-md border px-3 py-2 focus:ring-1"
+            >
+                <option value="vibrant">Vibrant</option>
+                <option value="tonal">Tonal Spot</option>
+            </select>
         </div>
     </div>
 
