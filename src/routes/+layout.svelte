@@ -6,6 +6,7 @@
 	import SideBar from '$lib/components/SideBar.svelte';
 	import { initializeConfig } from '$lib/config.svelte';
 	import { getCurrentScheme, getIsDark, initializeTheme } from '$lib/theme/store.svelte';
+	import { HDRRouter } from '@cattn/hdr';
 
 	let { children, data } = $props();
 
@@ -24,5 +25,6 @@
 	});
 </script>
 
+<HDRRouter/>
 <SideBar />
 {@render children()}

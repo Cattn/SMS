@@ -2,6 +2,7 @@
 	import { Button } from 'm3-svelte';
 	import { goto } from '$app/navigation';
 	import { configState } from '$lib/config.svelte';
+	import { hdrifyBackground } from '@cattn/hdr';
 </script>
 
 <div class="mb-8 flex min-h-screen flex-col items-center justify-center p-4 pl-28 md:p-0">
@@ -147,7 +148,7 @@
 		</div>
 	</div>
 
-	<div class="bg-primary-container w-full max-w-md rounded-2xl p-6 text-center">
+	<div class="bg-primary-container w-full max-w-md rounded-2xl p-6 text-center" {@attach hdrifyBackground()}>
 		<h3 class="text-on-primary-container mb-2 text-lg font-semibold">Ready to share?</h3>
 		<p class="text-on-primary-container mb-4 text-sm">
 			Upload your first file and get a shareable link in seconds
