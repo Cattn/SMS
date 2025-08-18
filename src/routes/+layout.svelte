@@ -10,6 +10,8 @@
 
 	let { children, data } = $props();
 
+	initializeTheme();
+
 	if (data?.config) {
 		initializeConfig(data.config);
 		initializeTheme();
