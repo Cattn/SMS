@@ -27,6 +27,6 @@
 	});
 </script>
 
-<HDRRouter/>
+<HDRRouter amplification={3}/>
 <SideBar />
 {@render children()}
