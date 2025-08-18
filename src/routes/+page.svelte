@@ -16,7 +16,7 @@
 
 	<div class="mb-5 grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
 		<div class="bg-primary-container rounded-3xl p-6 shadow-sm transition-shadow hover:shadow-md">
-			<div class="mb-4 flex items-center">
+			<div class="mb-4 flex items-center" {@attach hdrifyBackground()}>
 				<div class="bg-secondary mr-4 flex h-12 w-12 items-center justify-center rounded-2xl">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
