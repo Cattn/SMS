@@ -3,6 +3,7 @@
 	import { configState, updateConfig } from '$lib/config.svelte';
 	import { setDarkMode, getIsDark, getSourceColor, setThemeFromSourceColor } from '$lib/theme/store.svelte';
 	import ThemeGenerator from '$lib/components/ThemeGenerator.svelte';
+	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 	
 	let snackbar: ReturnType<typeof Snackbar>;
 
@@ -221,7 +222,7 @@
 
 <div class="mt-12 ml-32">
 	<div class="mb-6 flex flex-col gap-4 pr-10 md:flex-row md:items-center md:justify-between">
-		<h1 class="text-4xl font-bold">Settings</h1>
+		<h1 class="text-4xl font-bold" {@attach hdrify()}>Settings</h1>
 		<div class="flex gap-2">
 			<Button variant="outlined" onclick={importSettings}>
 				<svg
@@ -273,7 +274,7 @@
 
 	<section class="mr-10 mb-8">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold">
+			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold" {@attach hdrify()}>
 				<div class="bg-primary-container mr-3 flex h-8 w-8 items-center justify-center rounded-lg">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -298,7 +299,7 @@
 						<p class="text-on-surface-variant text-sm">Switch between light and dark themes</p>
 					</div>
 					<label>
-						<Switch checked={darkModeEnabled} onchange={updateDarkMode} />
+						<Switch checked={darkModeEnabled} onchange={updateDarkMode} {@attach hdrifyBackground()} />
 					</label>
 				</div>
 				<ThemeGenerator 
@@ -341,7 +342,7 @@
 
 	<section class="mr-10 mb-8">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold">
+			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold" {@attach hdrify()}>
 				<div
 					class="bg-secondary-container mr-3 flex h-8 w-8 items-center justify-center rounded-lg"
 				>
@@ -419,7 +420,7 @@
 
 	<section class="mr-10 mb-8">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold">
+			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold" {@attach hdrify()}>
 				<div class="bg-tertiary-container mr-3 flex h-8 w-8 items-center justify-center rounded-lg">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -453,7 +454,7 @@
 
 	<section class="mr-10 mb-8">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold">
+			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold" {@attach hdrify()}>
 				<div class="bg-error-container mr-3 flex h-8 w-8 items-center justify-center rounded-lg">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -503,7 +504,7 @@
 
 	<section class="mr-10 mb-20">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold">
+			<h2 class="text-on-surface mb-4 flex items-center text-2xl font-semibold" {@attach hdrify()}>
 				<div class="bg-primary mr-3 flex h-8 w-8 items-center justify-center rounded-lg">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -524,17 +525,17 @@
 			<div class="grid grid-cols-1 gap-4 md:grid-cols-2 lg:grid-cols-3">
 				<div class="bg-surface-variant rounded-2xl p-4 text-center">
 					<h3 class="text-on-surface mb-1 font-medium">Version</h3>
-					<p class="text-primary text-2xl font-bold">{systemInfo.version}</p>
+					<p class="text-primary text-2xl font-bold" {@attach hdrify()}>{systemInfo.version}</p>
 				</div>
 
 				<div class="bg-surface-variant rounded-2xl p-4 text-center">
 					<h3 class="text-on-surface mb-1 font-medium">Storage Used</h3>
-					<p class="text-primary text-2xl font-bold">{systemInfo.storageUsed}</p>
+					<p class="text-primary text-2xl font-bold" {@attach hdrify()}>{systemInfo.storageUsed}</p>
 				</div>
 
 				<div class="bg-surface-variant rounded-2xl p-4 text-center">
 					<h3 class="text-on-surface mb-1 font-medium">Total Files</h3>
-					<p class="text-primary text-2xl font-bold">{systemInfo.totalFiles}</p>
+					<p class="text-primary text-2xl font-bold" {@attach hdrify()}>{systemInfo.totalFiles}</p>
 				</div>
 			</div>
 

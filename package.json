@@ -24,7 +24,7 @@
 		"nobStart": "concurrently \"npm run Lstart\" \"npm run Ldev:api\""
 	},
 	"devDependencies": {
-		"@cattn/hdr": "^0.1.0",
+		"@cattn/hdr": "^0.2.6",
 		"@eslint/compat": "^1.2.5",
 		"@eslint/js": "^9.18.0",
 		"@sveltejs/adapter-auto": "^6.0.0",

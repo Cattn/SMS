@@ -24,6 +24,12 @@ const currentScheme = $derived<ColorScheme | null>(
         : null
 );
 
+function readCurrentScheme(): ColorScheme | null {
+    return themeState.currentTheme
+        ? (themeState.isDark ? themeState.currentTheme.dark : themeState.currentTheme.light)
+        : null;
+}
+
 function shouldUseM3Theme(): boolean {
     const sourceColorRgb = removeAlphaFromHex(themeState.sourceColor);
     const defaultColorRgb = removeAlphaFromHex(DEFAULT_SOURCE_COLOR);
@@ -42,6 +48,10 @@ function applySchemeToCSS(scheme: ColorScheme): void {
     Object.entries(scheme).forEach(([key, value]) => {
         root.style.setProperty(toCSSVar(key), value);
     });
+
+    try {
+        window.localStorage.setItem('smsThemeScheme', JSON.stringify(scheme));
+    } catch { void 0; }
 }
 
 export function setThemeFromSourceColor(sourceColor: string): void {
@@ -53,8 +63,9 @@ export function setThemeFromSourceColor(sourceColor: string): void {
     
     if (sourceColorRgb !== defaultColorRgb) {
         themeState.currentTheme = generateM3Theme(sourceColor, configState.theme.schemeType);
-        if (currentScheme) {
-            applySchemeToCSS(currentScheme);
+        const scheme = readCurrentScheme();
+        if (scheme) {
+            applySchemeToCSS(scheme);
         }
     } else {
         themeState.currentTheme = null;
@@ -63,6 +74,9 @@ export function setThemeFromSourceColor(sourceColor: string): void {
             const m3Props = Array.from(root.style).filter(prop => prop.startsWith('--m3-scheme-'));
             m3Props.forEach(prop => root.style.removeProperty(prop));
         }
+        try {
+            window.localStorage.removeItem('smsThemeScheme');
+        } catch { void 0; }
     }
     
     updateThemeConfig(sourceColor, themeState.isDark);
@@ -73,8 +87,11 @@ export function setDarkMode(isDark: boolean): void {
     configState.theme.isDarkMode = isDark;
     themeState.isDark = isDark;
     
-    if (shouldUseM3Theme() && currentScheme) {
-        applySchemeToCSS(currentScheme);
+    if (shouldUseM3Theme()) {
+        const scheme = readCurrentScheme();
+        if (scheme) {
+            applySchemeToCSS(scheme);
+        }
     }
     
     updateThemeConfig(themeState.sourceColor, isDark);
@@ -83,8 +100,9 @@ export function setDarkMode(isDark: boolean): void {
 export function setCustomTheme(theme: M3Theme): void {
     themeState.currentTheme = theme;
     
-    if (currentScheme) {
-        applySchemeToCSS(currentScheme);
+    const scheme = readCurrentScheme();
+    if (scheme) {
+        applySchemeToCSS(scheme);
     }
 }
 
@@ -113,8 +131,9 @@ export function setSchemeType(schemeType: SchemeType): void {
     
     if (shouldUseM3Theme()) {
         themeState.currentTheme = generateM3Theme(themeState.sourceColor, schemeType);
-        if (currentScheme) {
-            applySchemeToCSS(currentScheme);
+        const scheme = readCurrentScheme();
+        if (scheme) {
+            applySchemeToCSS(scheme);
         }
     }
     
@@ -131,8 +150,9 @@ export function initializeTheme(): void {
     if (sourceColorRgb !== defaultColorRgb) {
         themeState.currentTheme = generateM3Theme(configState.theme.sourceColor, configState.theme.schemeType);
         
-        if (currentScheme) {
-            applySchemeToCSS(currentScheme);
+        const scheme = readCurrentScheme();
+        if (scheme) {
+            applySchemeToCSS(scheme);
         }
     } else {
         themeState.currentTheme = null;
@@ -142,6 +162,21 @@ export function initializeTheme(): void {
 
 
 if (browser) {
+    themeState.sourceColor = configState.theme.sourceColor;
+    themeState.isDark = configState.general.darkModeEnabled;
+    const sourceColorRgb = removeAlphaFromHex(themeState.sourceColor);
+    const defaultColorRgb = removeAlphaFromHex(DEFAULT_SOURCE_COLOR);
+    if (sourceColorRgb !== defaultColorRgb) {
+        themeState.currentTheme = generateM3Theme(themeState.sourceColor, configState.theme.schemeType);
+        const scheme = readCurrentScheme();
+        if (scheme) {
+            applySchemeToCSS(scheme);
+        }
+    }
+    try {
+        document.documentElement.classList.toggle('dark', themeState.isDark);
+    } catch { void 0; }
+
     if (configState.general.darkModeEnabled) {
         window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', (e) => {
             setDarkMode(e.matches);

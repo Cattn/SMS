@@ -5,6 +5,7 @@
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
 	import { configState } from '$lib/config.svelte';
+	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 
 	let { data }: { data: PageData } = $props();
 
@@ -319,13 +320,13 @@
 
 <div class="mt-12 ml-32">
 	<div class="mb-3 flex flex-col gap-4 pr-10 md:flex-row md:items-center md:justify-between">
-		<h1 class="text-4xl font-bold">Browse Files</h1>
+		<h1 class="text-4xl font-bold" {@attach hdrify()}>Browse Files</h1>
 		<div class="flex gap-2">
 			<Button variant="outlined" onclick={() => (createTagDialog = { open: true, tagName: '', tagColor: generateRandomColor() })}>
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24"><path fill="currentColor" d="m9 16l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T6.3 18.8L7 16H4.275q-.5 0-.8-.387T3.3 14.75q.075-.35.35-.55t.625-.2H7.5l1-4H5.775q-.5 0-.8-.387T4.8 8.75q.075-.35.35-.55t.625-.2H9l.825-3.275Q9.9 4.4 10.15 4.2t.6-.2q.475 0 .775.375t.175.825L11 8h4l.825-3.275q.075-.325.325-.525t.6-.2q.475 0 .775.375t.175.825L17 8h2.725q.5 0 .8.387t.175.863q-.075.35-.35.55t-.625.2H16.5l-1 4h2.725q.5 0 .8.388t.175.862q-.075.35-.35.55t-.625.2H15l-.825 3.275q-.075.325-.325.525t-.6.2q-.475 0-.775-.375T12.3 18.8L13 16zm.5-2h4l1-4h-4z"/></svg>
 				New Tag
 			</Button>
-			<Button variant="filled" onclick={() => (createFolderDialog = { open: true, folderName: '' })}>
+			<Button variant="filled" onclick={() => (createFolderDialog = { open: true, folderName: '' })} {@attach hdrifyBackground()}>
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
 					<path fill="currentColor" d="M12 2c-.41 0-.75.34-.75.75v8.5h-8.5c-.41 0-.75.34-.75.75s.34.75.75.75h8.5v8.5c0 .41.34.75.75.75s.75-.34.75-.75v-8.5h8.5c.41 0 .75-.34.75-.75s-.34-.75-.75-.75h-8.5v-8.5c0-.41-.34-.75-.75-.75z"/>
 				</svg>
@@ -339,7 +340,7 @@
 				<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" class="mr-2">
 					<path fill="currentColor" d="M12 15.5A3.5 3.5 0 0 1 8.5 12A3.5 3.5 0 0 1 12 8.5a3.5 3.5 0 0 1 3.5 3.5a3.5 3.5 0 0 1-3.5 3.5m7.43-2.53c.04-.32.07-.64.07-.97s-.03-.66-.07-1l2.11-1.63c.19-.15.24-.42.12-.64l-2-3.46c-.12-.22-.39-.31-.61-.22l-2.49 1c-.52-.39-1.06-.73-1.69-.98l-.37-2.65A.506.506 0 0 0 14 2h-4c-.25 0-.46.18-.5.42l-.37 2.65c-.63.25-1.17.59-1.69.98l-2.49-1c-.22-.09-.49 0-.61.22l-2 3.46c-.13.22-.07.49.12.64L4.57 11c-.04.34-.07.67-.07 1s.03.65.07.97l-2.11 1.66c-.19.15-.25.42-.12.64l2 3.46c.12.22.39.3.61.22l2.49-1.01c.52.4 1.06.74 1.69.99l.37 2.65c.04.24.25.42.5.42h4c.25 0 .46-.18.5-.42l.37-2.65c.63-.26 1.17-.59 1.69-.99l2.49 1.01c.22.08.49 0 .61-.22l2-3.46c.12-.22.07-.49-.12-.64z"/>
 				</svg>
-				Manage Tags
+				<p {@attach hdrify()}>Manage Tags</p>
 			</Button>
 		</div>
 	</div>
@@ -408,7 +409,7 @@
 
 	{#if filteredContent.folders.length > 0}
 		<section class="mr-10 mb-8">
-			<h2 class="mb-4 text-2xl font-semibold">Folders</h2>
+			<h2 class="mb-4 text-2xl font-semibold" {@attach hdrify()}>Folders</h2>
 			<div class="space-y-2">
 				{#each filteredContent.folders as folder}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -524,7 +525,7 @@
 							>
 								<input type="hidden" name="folderPath" value={folder.relative_path} />
 								<input type="hidden" name="excluded" value={!folder.is_excluded} />
-								<Button type="submit" variant={folder.is_excluded ? 'filled' : 'outlined'}>
+								<Button type="submit" variant={folder.is_excluded ? 'filled' : 'outlined'} {@attach hdrifyBackground()}>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="24"
@@ -578,6 +579,7 @@
 											e.preventDefault();
 										}
 									}}
+									{@attach hdrifyBackground()}
 								>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
@@ -601,7 +603,7 @@
 
 	{#if filteredContent.files.length > 0}
 		<section class="mr-10 mb-20">
-			<h2 class="mb-4 text-2xl font-semibold">Files</h2>
+			<h2 class="mb-4 text-2xl font-semibold" {@attach hdrify()}>Files</h2>
 			<div class="space-y-2">
 				{#each filteredContent.files as file}
 					<!-- svelte-ignore a11y_click_events_have_key_events -->
@@ -673,6 +675,7 @@
 													variant="assist"
 													style="background-color: {tag.color}20; color: {tag.color};"
 													click={() => removeTagFromItem('file', file.relative_path, tag.id)}
+													{@attach hdrifyBackground()}
 												>
 													{tag.name}
 												</Chip>

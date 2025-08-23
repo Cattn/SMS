@@ -58,15 +58,30 @@ export const configState = $state<ConfigType>(defaultConfig);
 
 export function updateConfig(newConfig: ConfigType) {
 	Object.assign(configState, newConfig);
+	if (typeof window !== 'undefined') {
+		try {
+			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
+		} catch { void 0; }
+	}
 }
 
 export function initializeConfig(initialConfig: ConfigType) {
 	Object.assign(configState, initialConfig);
+	if (typeof window !== 'undefined') {
+		try {
+			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
+		} catch { void 0; }
+	}
 }
 
 export async function updateThemeConfig(sourceColor: string, isDarkMode: boolean) {
 	configState.theme.sourceColor = sourceColor;
 	configState.theme.isDarkMode = isDarkMode;
+	if (typeof window !== 'undefined') {
+		try {
+			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
+		} catch { void 0; }
+	}
 	
 	if (typeof window === 'undefined') return;
 	
@@ -85,4 +100,14 @@ export async function updateThemeConfig(sourceColor: string, isDarkMode: boolean
 	} catch (error) {
 		console.error('Error updating theme config:', error);
 	}
+}
+
+if (typeof window !== 'undefined') {
+	try {
+		const stored = window.localStorage.getItem('smsConfig');
+		if (stored) {
+			const parsed = JSON.parse(stored) as ConfigType;
+			Object.assign(configState, parsed);
+		}
+	} catch { void 0; }
 }

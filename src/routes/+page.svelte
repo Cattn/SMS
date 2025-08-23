@@ -2,12 +2,12 @@
 	import { Button } from 'm3-svelte';
 	import { goto } from '$app/navigation';
 	import { configState } from '$lib/config.svelte';
-	import { hdrifyBackground } from '@cattn/hdr';
+	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 </script>
 
 <div class="mb-8 flex min-h-screen flex-col items-center justify-center p-4 pl-28 md:p-0">
 	<div class="mb-4 text-center">
-		<h1 class="sms-title text-primary decoration-tertiary underline">SMS</h1>
+		<h1 class="sms-title text-primary decoration-tertiary underline" {@attach hdrify()}>SMS</h1>
 		<p class="text-on-surface-variant mt-2 max-w-md text-lg">
 			Simple file sharing made easy. Upload, share, and manage your files with automatic expiration
 			and clean links.
@@ -15,8 +15,8 @@
 	</div>
 
 	<div class="mb-5 grid w-full max-w-4xl grid-cols-1 gap-6 md:grid-cols-2">
-		<div class="bg-surface-container rounded-3xl p-6 shadow-sm transition-shadow hover:shadow-md">
-			<div class="mb-4 flex items-center">
+		<div class="bg-primary-container rounded-3xl p-6 shadow-sm transition-shadow hover:shadow-md">
+			<div class="mb-4 flex items-center" >
 				<div class="bg-secondary mr-4 flex h-12 w-12 items-center justify-center rounded-2xl">
 					<svg
 						xmlns="http://www.w3.org/2000/svg"
@@ -32,7 +32,7 @@
 					</svg>
 				</div>
 				<div>
-					<h3 class="text-on-surface text-xl font-semibold">Upload Files</h3>
+					<h3 class="text-on-surface text-xl font-semibold" {@attach hdrify()}>Upload Files</h3>
 					<p class="text-on-surface-variant text-sm">Share files with custom expiration</p>
 				</div>
 			</div>
@@ -40,7 +40,7 @@
 				Upload any file and get a shareable link. Set custom expiration times or let files live
 				forever.
 			</p>
-			<Button variant="filled" onclick={() => goto('/upload')}>Start Upload</Button>
+			<Button variant="filled" onclick={() => goto('/upload')} {@attach hdrifyBackground()}>Start Upload</Button>
 		</div>
 
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm transition-shadow hover:shadow-md">
@@ -60,7 +60,7 @@
 					</svg>
 				</div>
 				<div>
-					<h3 class="text-on-surface text-xl font-semibold">File Library</h3>
+					<h3 class="text-on-surface text-xl font-semibold" {@attach hdrify()}>File Library</h3>
 					<p class="text-on-surface-variant text-sm">Manage your uploaded files</p>
 				</div>
 			</div>
@@ -68,13 +68,13 @@
 				View, download, and manage all your uploaded files. Preview images and videos directly in
 				your browser.
 			</p>
-			<Button variant="filled" onclick={() => goto('/library')}>Browse Files</Button>
+			<Button variant="filled" onclick={() => goto('/library')} {@attach hdrifyBackground()}>Browse Files</Button>
 		</div>
 	</div>
 
 	<div class="mb-8 w-full max-w-4xl">
 		<div class="bg-surface-container rounded-3xl p-6 shadow-sm">
-			<h2 class="text-on-surface text-center text-2xl font-semibold">Features</h2>
+			<h2 class="text-on-surface text-center text-2xl font-semibold" {@attach hdrify()}>Features</h2>
 			<div class="grid grid-cols-1 gap-6 md:grid-cols-3">
 				<div class="p-4 text-center">
 					<div
@@ -86,6 +86,7 @@
 							height="28"
 							viewBox="0 0 24 24"
 							class="text-on-tertiary-container"
+							
 						>
 							<path
 								fill="currentColor"
@@ -93,7 +94,7 @@
 							/>
 						</svg>
 					</div>
-					<h4 class="text-on-surface mb-2 font-semibold">Auto Expiration</h4>
+					<h4 class="text-on-surface mb-2 font-semibold" {@attach hdrify()}>Auto Expiration</h4>
 					<p class="text-on-surface-variant text-sm">
 						Set custom expiration times for automatic file cleanup
 					</p>
@@ -116,7 +117,7 @@
 							/>
 						</svg>
 					</div>
-					<h4 class="text-on-surface mb-2 font-semibold">Clean URLs</h4>
+					<h4 class="text-on-surface mb-2 font-semibold" {@attach hdrify()}>Clean URLs</h4>
 					<p class="text-on-surface-variant text-sm">
 						Generate clean, shareable links for easy file access
 					</p>
@@ -139,7 +140,7 @@
 							/>
 						</svg>
 					</div>
-					<h4 class="text-on-surface mb-2 font-semibold">Media Preview</h4>
+					<h4 class="text-on-surface mb-2 font-semibold" {@attach hdrify()}>Media Preview</h4>
 					<p class="text-on-surface-variant text-sm">
 						Preview images and videos directly in your browser
 					</p>
@@ -149,11 +150,11 @@
 	</div>
 
 	<div class="bg-primary-container w-full max-w-md rounded-2xl p-6 text-center" {@attach hdrifyBackground()}>
-		<h3 class="text-on-primary-container mb-2 text-lg font-semibold">Ready to share?</h3>
-		<p class="text-on-primary-container mb-4 text-sm">
+		<h3 class="text-on-primary-container mb-2 text-lg font-semibold" {@attach hdrify()}>Ready to share?</h3>
+		<p class="text-on-primary-container mb-4 text-sm" {@attach hdrify()}>
 			Upload your first file and get a shareable link in seconds
 		</p>
-		<Button variant="filled" onclick={() => goto('/upload')}>
+		<Button variant="filled" onclick={() => goto('/upload')} {@attach hdrifyBackground()}>
 			<svg
 				xmlns="http://www.w3.org/2000/svg"
 				width="20"

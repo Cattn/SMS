@@ -2,6 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Button, WavyLinearProgress } from 'm3-svelte';
 	import { configState } from '$lib/config.svelte';
+	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 
 	let files = $state<FileList | undefined>();
 	let uploadProgress = $state(0);
@@ -196,6 +197,7 @@
 		<label
 			for="file"
 			class="bg-primary text-on-primary hover:bg-primary-container hover:text-on-primary-container w-full rounded-lg p-8 text-center hover:cursor-pointer md:p-20"
+			{@attach hdrifyBackground()}
 		>
 			Select File
 			<br />
@@ -214,6 +216,7 @@
 						id="enablePath"
 						bind:checked={enablePath}
 						class="text-primary bg-surface border-outline focus:ring-primary h-4 w-4 rounded"
+						{@attach hdrifyBackground()}
 					/>
 					<label for="enablePath" class="text-on-surface text-sm font-medium">
 						Upload to path
@@ -225,6 +228,7 @@
 						id="enableCopy"
 						bind:checked={enableCopy}
 						class="text-primary bg-surface border-outline focus:ring-primary h-4 w-4 rounded"
+						{@attach hdrifyBackground()}
 					/>
 					<label for="enableCopy" class="text-on-surface text-sm font-medium">
 						Copy link when done
@@ -236,6 +240,7 @@
 						id="enableExpiration"
 						bind:checked={enableExpiration}
 						class="text-primary bg-surface border-outline focus:ring-primary h-4 w-4 rounded"
+						{@attach hdrifyBackground()}
 					/>
 					<label for="enableExpiration" class="text-on-surface text-sm font-medium">
 						Set file expiration

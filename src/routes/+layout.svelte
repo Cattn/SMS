@@ -10,6 +10,8 @@
 
 	let { children, data } = $props();
 
+	initializeTheme();
+
 	if (data?.config) {
 		initializeConfig(data.config);
 		initializeTheme();
@@ -25,6 +27,6 @@
 	});
 </script>
 
-<HDRRouter/>
+<HDRRouter amplification={1.6}/>
 <SideBar />
 {@render children()}

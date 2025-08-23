@@ -4,6 +4,7 @@
 	import { Button, Snackbar, ConnectedButtons, TogglePrimitive, Chip } from 'm3-svelte';
 	import { configState } from '$lib/config.svelte';
 	import { enhance } from '$app/forms';
+	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 
 	let { data, form }: PageProps = $props();
 
@@ -213,7 +214,7 @@
 </script>
 
 <div class="mt-12 ml-32">
-	<h1 class="mb-6 pr-10 text-center text-4xl font-bold">Library</h1>
+	<h1 class="mb-6 pr-10 text-center text-4xl font-bold" {@attach hdrify()}>Library</h1>
 	<div class="mb-5 w-full pr-10">
 		<div>
 			<ConnectedButtons>
@@ -242,7 +243,7 @@
 										{/if}
 										<p class="text-xs text-gray-500">Click to load</p>
 									</div>
-									<Button variant="filled" onclick={() => loadImage(file.relative_path)}>
+									<Button variant="filled" onclick={() => loadImage(file.relative_path)} {@attach hdrifyBackground()}>
 										Load Image
 									</Button>
 								</div>
@@ -331,7 +332,7 @@
 							<div>
 								<form method="POST" action="?/delete" use:enhance>
 									<input type="hidden" name="fileName" value={file.relative_path} />
-									<Button type="submit" variant="filled">
+									<Button type="submit" variant="filled" {@attach hdrifyBackground()}>
 										<svg
 											xmlns="http://www.w3.org/2000/svg"
 											width="24"
@@ -372,7 +373,7 @@
 										{/if}
 										<p class="text-xs text-gray-500">Click to load</p>
 									</div>
-									<Button variant="filled" onclick={() => loadImage(file.relative_path)}>
+									<Button variant="filled" onclick={() => loadImage(file.relative_path)} {@attach hdrifyBackground()}>
 										Load Video
 									</Button>
 								</div>
@@ -419,7 +420,7 @@
 								<div class="pl-2">
 									<form method="POST" action="?/delete" use:enhance>
 										<input type="hidden" name="fileName" value={file.relative_path} />
-										<Button type="submit" variant="filled">
+										<Button type="submit" variant="filled" {@attach hdrifyBackground()}>
 											<svg
 												xmlns="http://www.w3.org/2000/svg"
 												width="24"
@@ -505,7 +506,7 @@
 							</div>
 							<form method="POST" action="?/delete" use:enhance class="hidden md:block">
 								<input type="hidden" name="fileName" value={file.relative_path} />
-								<Button type="submit" variant="filled">
+								<Button type="submit" variant="filled" {@attach hdrifyBackground()}>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="24"
@@ -545,7 +546,7 @@
 							{/if}
 							<form method="POST" action="?/delete" use:enhance>
 								<input type="hidden" name="fileName" value={file.relative_path} />
-								<Button type="submit" variant="filled">
+								<Button type="submit" variant="filled" {@attach hdrifyBackground()}>
 									<svg
 										xmlns="http://www.w3.org/2000/svg"
 										width="24"
