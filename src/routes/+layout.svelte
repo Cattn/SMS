@@ -4,18 +4,26 @@
 	import '../main.css';
 
 	import SideBar from '$lib/components/SideBar.svelte';
-	import { initializeConfig } from '$lib/config.svelte';
+	import { configState, initializeConfig } from '$lib/config.svelte';
 	import { getCurrentScheme, getIsDark, initializeTheme } from '$lib/theme/store.svelte';
-	import { HDRRouter } from '@cattn/hdr';
+	import { HDRRouter, setHdrEnabled, isHdrEnabled } from '@cattn/hdr';
 
 	let { children, data } = $props();
+	let initialized = false;
 
-	initializeTheme();
+	$effect(() => {
+		if (initialized) {
+			return;
+		}
 
-	if (data?.config) {
-		initializeConfig(data.config);
+		initialized = true;
+
+		if (data?.config) {
+			initializeConfig(data.config);
+		}
+
 		initializeTheme();
-	}
+	});
 
 	let currentScheme = $derived(getCurrentScheme());
 	let isDark = $derived(getIsDark());
@@ -23,6 +31,13 @@
 	$effect(() => {
 		if (typeof document !== 'undefined') {
 			document.documentElement.classList.toggle('dark', isDark);
+		}
+	});
+
+	$effect(() => {
+		const enabled = configState.theme.hdrEnabled;
+		if (isHdrEnabled() !== enabled) {
+			setHdrEnabled(enabled);
 		}
 	});
 </script>

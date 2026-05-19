@@ -3,7 +3,7 @@
 	import { configState, updateConfig } from '$lib/config.svelte';
 	import { setDarkMode, getIsDark, getSourceColor, setThemeFromSourceColor } from '$lib/theme/store.svelte';
 	import ThemeGenerator from '$lib/components/ThemeGenerator.svelte';
-	import { hdrifyBackground, hdrify } from '@cattn/hdr';
+	import { hdrifyBackground, hdrify, setHdrEnabled, isHdrEnabled } from '@cattn/hdr';
 	
 	let snackbar: ReturnType<typeof Snackbar>;
 
@@ -15,6 +15,7 @@
 	let showFileSize = $derived(configState.display.showFileSize);
 	let domain = $derived(configState.server.domain);
 	let fileServingEnabled = $derived(configState.server.fileServingEnabled);
+	let hdrEnabled = $derived(configState.theme.hdrEnabled);
 	let systemInfo = $derived(
 		configState.system || {
 			version: '0.0.1',
@@ -48,7 +49,8 @@
 				theme: { 
 					sourceColor: configState.theme.sourceColor, 
 					isDarkMode: darkModeEnabled,
-					schemeType: configState.theme.schemeType
+					schemeType: configState.theme.schemeType,
+					hdrEnabled
 				},
 				upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 				display: { showFileSize },
@@ -79,12 +81,18 @@
 		if (confirm('Are you sure you want to reset all settings to default values?')) {
 			const defaultConfig = {
 				general: { darkModeEnabled: true },
-				theme: { sourceColor: '#8f4a4c', isDarkMode: true, schemeType: 'vibrant' as const },
+				theme: {
+					sourceColor: '#8f4a4c',
+					isDarkMode: true,
+					schemeType: 'vibrant' as const,
+					hdrEnabled: true
+				},
 				upload: { defaultExpirationEnabled: false, defaultExpiration: '1h', autoCopyLinks: true },
 				display: { showFileSize: true },
 				server: { domain: '', fileServingEnabled: false }
 			};
 
+			setHdrEnabled(defaultConfig.theme.hdrEnabled);
 			updateConfig(defaultConfig);
 			snackbar.show({ message: 'Settings reset to defaults', closable: true });
 		}
@@ -96,7 +104,8 @@
 			theme: { 
 				sourceColor: configState.theme.sourceColor, 
 				isDarkMode: darkModeEnabled,
-				schemeType: configState.theme.schemeType
+				schemeType: configState.theme.schemeType,
+				hdrEnabled
 			},
 			upload: { defaultExpirationEnabled, defaultExpiration, autoCopyLinks },
 			display: { showFileSize },
@@ -133,7 +142,8 @@
 							theme: {
 								sourceColor: settings.theme?.sourceColor ?? '#8f4a4c',
 								isDarkMode: settings.theme?.isDarkMode ?? true,
-								schemeType: settings.theme?.schemeType ?? 'vibrant'
+								schemeType: settings.theme?.schemeType ?? 'vibrant',
+								hdrEnabled: settings.theme?.hdrEnabled ?? true
 							},
 							upload: {
 								defaultExpirationEnabled: settings.upload?.defaultExpirationEnabled ?? false,
@@ -149,6 +159,7 @@
 							}
 						};
 
+						setHdrEnabled(newConfig.theme.hdrEnabled);
 						updateConfig(newConfig);
 						snackbar.show({ message: 'Settings imported successfully', closable: true });
 					} catch (error) {
@@ -176,6 +187,17 @@
 		updateConfig({
 			...configState,
 			upload: { ...configState.upload, defaultExpirationEnabled: target.checked }
+		});
+	}
+
+	function updateHdrEnabled(e: Event) {
+		const target = e.target as HTMLInputElement;
+		if (isHdrEnabled() !== target.checked) {
+			setHdrEnabled(target.checked);
+		}
+		updateConfig({
+			...configState,
+			theme: { ...configState.theme, hdrEnabled: target.checked }
 		});
 	}
 
@@ -300,6 +322,15 @@
 					</div>
 					<label>
 						<Switch checked={darkModeEnabled} onchange={updateDarkMode} {@attach hdrifyBackground()} />
+					</label>
+				</div>
+				<div class="bg-surface-variant flex items-center justify-between rounded-2xl p-4">
+					<div>
+						<h3 class="text-on-surface font-medium">HDR</h3>
+						<p class="text-on-surface-variant text-sm">Enable HDR visual effects</p>
+					</div>
+					<label>
+						<Switch checked={hdrEnabled} onchange={updateHdrEnabled} {@attach hdrifyBackground()} />
 					</label>
 				</div>
 				<ThemeGenerator 

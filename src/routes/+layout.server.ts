@@ -20,7 +20,9 @@ export const load: LayoutServerLoad = async ({ fetch, url }) => {
 			},
 			theme: {
 				sourceColor: '#8f4a4c',
-				isDarkMode: true
+				isDarkMode: true,
+				schemeType: 'vibrant',
+				hdrEnabled: true
 			},
 			upload: {
 				defaultExpirationEnabled: false,

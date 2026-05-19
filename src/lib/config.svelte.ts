@@ -6,6 +6,7 @@ interface ConfigType {
 		sourceColor: string;
 		isDarkMode: boolean;
 		schemeType: 'vibrant' | 'tonal';
+		hdrEnabled: boolean;
 	};
 	upload: {
 		defaultExpirationEnabled: boolean;
@@ -33,7 +34,8 @@ const defaultConfig: ConfigType = {
 	theme: {
 		sourceColor: '#8f4a4c',
 		isDarkMode: true,
-		schemeType: 'vibrant'
+		schemeType: 'vibrant',
+		hdrEnabled: true
 	},
 	upload: {
 		defaultExpirationEnabled: false,
@@ -56,8 +58,40 @@ const defaultConfig: ConfigType = {
 
 export const configState = $state<ConfigType>(defaultConfig);
 
+function normalizeConfig(config: Partial<ConfigType>): ConfigType {
+	return {
+		general: {
+			darkModeEnabled: config.general?.darkModeEnabled ?? defaultConfig.general.darkModeEnabled
+		},
+		theme: {
+			sourceColor: config.theme?.sourceColor ?? defaultConfig.theme.sourceColor,
+			isDarkMode: config.theme?.isDarkMode ?? defaultConfig.theme.isDarkMode,
+			schemeType: config.theme?.schemeType ?? defaultConfig.theme.schemeType,
+			hdrEnabled: config.theme?.hdrEnabled ?? defaultConfig.theme.hdrEnabled
+		},
+		upload: {
+			defaultExpirationEnabled:
+				config.upload?.defaultExpirationEnabled ?? defaultConfig.upload.defaultExpirationEnabled,
+			defaultExpiration: config.upload?.defaultExpiration ?? defaultConfig.upload.defaultExpiration,
+			autoCopyLinks: config.upload?.autoCopyLinks ?? defaultConfig.upload.autoCopyLinks
+		},
+		display: {
+			showFileSize: config.display?.showFileSize ?? defaultConfig.display.showFileSize
+		},
+		server: {
+			domain: config.server?.domain ?? defaultConfig.server.domain,
+			fileServingEnabled: config.server?.fileServingEnabled ?? defaultConfig.server.fileServingEnabled
+		},
+		system: {
+			version: config.system?.version ?? defaultConfig.system?.version ?? '1.0.0',
+			storageUsed: config.system?.storageUsed ?? defaultConfig.system?.storageUsed ?? '0 B',
+			totalFiles: config.system?.totalFiles ?? defaultConfig.system?.totalFiles ?? 0
+		}
+	};
+}
+
 export async function updateConfig(newConfig: ConfigType) {
-	Object.assign(configState, newConfig);
+	Object.assign(configState, normalizeConfig(newConfig));
 	if (typeof window !== 'undefined') {
 		try {
 			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
@@ -78,7 +112,7 @@ export async function updateConfig(newConfig: ConfigType) {
 }
 
 export function initializeConfig(initialConfig: ConfigType) {
-	Object.assign(configState, initialConfig);
+	Object.assign(configState, normalizeConfig(initialConfig));
 	if (typeof window !== 'undefined') {
 		try {
 			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
@@ -118,8 +152,8 @@ if (typeof window !== 'undefined') {
 	try {
 		const stored = window.localStorage.getItem('smsConfig');
 		if (stored) {
-			const parsed = JSON.parse(stored) as ConfigType;
-			Object.assign(configState, parsed);
+			const parsed = JSON.parse(stored) as Partial<ConfigType>;
+			Object.assign(configState, normalizeConfig(parsed));
 		}
 	} catch { void 0; }
 }

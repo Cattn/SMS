@@ -14,6 +14,7 @@ interface Config {
 		sourceColor: string;
 		isDarkMode: boolean;
 		schemeType: 'vibrant' | 'tonal';
+		hdrEnabled: boolean;
 	};
 	upload: {
 		defaultExpirationEnabled: boolean;
@@ -42,7 +43,8 @@ const defaultConfig: Config = {
 	theme: {
 		sourceColor: '#8f4a4c',
 		isDarkMode: true,
-		schemeType: 'vibrant'
+		schemeType: 'vibrant',
+		hdrEnabled: true
 	},
 	upload: {
 		defaultExpirationEnabled: false,
@@ -58,11 +60,38 @@ const defaultConfig: Config = {
 	}
 };
 
+function normalizeConfig(config: Partial<Config>): Config {
+	return {
+		general: {
+			darkModeEnabled: config.general?.darkModeEnabled ?? defaultConfig.general.darkModeEnabled
+		},
+		theme: {
+			sourceColor: config.theme?.sourceColor ?? defaultConfig.theme.sourceColor,
+			isDarkMode: config.theme?.isDarkMode ?? defaultConfig.theme.isDarkMode,
+			schemeType: config.theme?.schemeType ?? defaultConfig.theme.schemeType,
+			hdrEnabled: config.theme?.hdrEnabled ?? defaultConfig.theme.hdrEnabled
+		},
+		upload: {
+			defaultExpirationEnabled:
+				config.upload?.defaultExpirationEnabled ?? defaultConfig.upload.defaultExpirationEnabled,
+			defaultExpiration: config.upload?.defaultExpiration ?? defaultConfig.upload.defaultExpiration,
+			autoCopyLinks: config.upload?.autoCopyLinks ?? defaultConfig.upload.autoCopyLinks
+		},
+		display: {
+			showFileSize: config.display?.showFileSize ?? defaultConfig.display.showFileSize
+		},
+		server: {
+			domain: config.server?.domain ?? defaultConfig.server.domain,
+			fileServingEnabled: config.server?.fileServingEnabled ?? defaultConfig.server.fileServingEnabled
+		}
+	};
+}
+
 function readConfig(): Config {
 	try {
 		if (fs.existsSync(configPath)) {
 			const configData = fs.readFileSync(configPath, 'utf8');
-			return JSON.parse(configData);
+			return normalizeConfig(JSON.parse(configData) as Partial<Config>);
 		}
 
 		console.log('Config file not found, creating default config...');
@@ -202,7 +231,7 @@ export const getConfig = async (req: Request, res: Response): Promise<void> => {
 
 export const updateConfig = async (req: Request, res: Response): Promise<void> => {
 	try {
-		const updatedConfig: Config = req.body;
+		const updatedConfig = req.body as Partial<Config>;
 
 		if (
 			!updatedConfig.general ||
@@ -215,10 +244,11 @@ export const updateConfig = async (req: Request, res: Response): Promise<void> =
 			return;
 		}
 
-		const success = writeConfig(updatedConfig);
+		const normalizedConfig = normalizeConfig(updatedConfig);
+		const success = writeConfig(normalizedConfig);
 
 		if (success) {
-			res.json({ message: 'Configuration updated successfully', config: updatedConfig });
+			res.json({ message: 'Configuration updated successfully', config: normalizedConfig });
 		} else {
 			res.status(500).json({ error: 'Failed to save configuration' });
 		}
