@@ -85,7 +85,9 @@
 	let copiedFile = $state<string | null>(null);
 
 	function getLink(relativePath: string) {
-		return configState.server.domain + '/SMS/uploads/' + relativePath;
+		const base = (configState.server.domain ?? '').replace(/\/+$/, '');
+		const path = relativePath.replace(/^\/+/, '');
+		return `${base}/SMS/uploads/${path}`;
 	}
 
 	async function copyToClipboard(relativePath: string) {

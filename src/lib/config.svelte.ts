@@ -56,12 +56,24 @@ const defaultConfig: ConfigType = {
 
 export const configState = $state<ConfigType>(defaultConfig);
 
-export function updateConfig(newConfig: ConfigType) {
+export async function updateConfig(newConfig: ConfigType) {
 	Object.assign(configState, newConfig);
 	if (typeof window !== 'undefined') {
 		try {
 			window.localStorage.setItem('smsConfig', JSON.stringify(configState));
 		} catch { void 0; }
+		try {
+			const { system, ...configToSave } = configState;
+			await fetch(`${window.location.protocol}//${window.location.hostname}:5823/api/config`, {
+				method: 'PUT',
+				headers: {
+					'Content-Type': 'application/json'
+				},
+				body: JSON.stringify(configToSave)
+			});
+		} catch (error) {
+			console.error('Failed to update config:', error);
+		}
 	}
 }
 

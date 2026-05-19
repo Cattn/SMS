@@ -2,7 +2,7 @@
 	import { enhance } from '$app/forms';
 	import { Button, WavyLinearProgress } from 'm3-svelte';
 	import { configState } from '$lib/config.svelte';
-	import { hdrifyBackground, hdrify } from '@cattn/hdr';
+	import { hdrifyBackground } from '@cattn/hdr';
 
 	let files = $state<FileList | undefined>();
 	let uploadProgress = $state(0);
@@ -93,24 +93,47 @@
 	}
 
 	function getLink(fileName: string) {
-		if (enablePath) {
-			return configState.server.domain + '/SMS/uploads/' + uploadPath + '/' + fileName;
-		} else {
-			return configState.server.domain + '/SMS/uploads/' + fileName;
+		const base = (configState.server.domain ?? '').trim().replace(/\/+$/, '');
+		const encodedFileName = encodeURIComponent(fileName);
+		const pathSegments = ['SMS', 'uploads'];
+
+		if (enablePath && uploadPath.trim()) {
+			pathSegments.push(
+				...uploadPath
+					.trim()
+					.replace(/\\/g, '/')
+					.split('/')
+					.filter(Boolean)
+					.map((segment) => encodeURIComponent(segment))
+			);
 		}
+
+		pathSegments.push(encodedFileName);
+		return `${base}/${pathSegments.join('/')}`;
 	}
 
 	async function copyToClipboard(text: string) {
 		try {
-			if (!navigator.clipboard) {
-				const textArea = document.createElement('textarea');
-				textArea.value = text;
-				document.body.appendChild(textArea);
-				textArea.select();
-				document.execCommand('copy');
-				document.body.removeChild(textArea);
-			} else {
+			if (window.isSecureContext && navigator.clipboard?.writeText) {
 				await navigator.clipboard.writeText(text);
+				return;
+			}
+
+			const textArea = document.createElement('textarea');
+			textArea.value = text;
+			textArea.setAttribute('readonly', '');
+			textArea.style.position = 'fixed';
+			textArea.style.left = '-9999px';
+			textArea.style.top = '0';
+			document.body.appendChild(textArea);
+			textArea.focus();
+			textArea.select();
+			textArea.setSelectionRange(0, textArea.value.length);
+			const copied = document.execCommand('copy');
+			document.body.removeChild(textArea);
+
+			if (!copied) {
+				throw new Error('document.execCommand("copy") failed');
 			}
 		} catch (err) {
 			console.error('Failed to copy link:', err);
