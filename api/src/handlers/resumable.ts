@@ -46,7 +46,13 @@ export const createUpload = (req: Request, res: Response): void => {
 		res.status(400).json({ error: 'A filename and file size are required' });
 		return;
 	}
-	const pathError = validateUploadPath(uploadPath);
+	const resolvedTarget = path.resolve(uploadsDir, uploadPath);
+	const pathError =
+		validateUploadPath(uploadPath) ??
+		(resolvedTarget === path.resolve(uploadsDir) ||
+		resolvedTarget.startsWith(path.resolve(uploadsDir) + path.sep)
+			? null
+			: 'Upload path must be within uploads directory');
 	if (pathError) {
 		res.status(400).json({ error: pathError });
 		return;
