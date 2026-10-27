@@ -173,7 +173,10 @@ export const getFolders = async (req: Request, res: Response): Promise<void> => 
 	}
 };
 
-export const deleteFolder = async (req: Request, res: Response): Promise<void> => {
+export const deleteFolder = async (
+	req: Request<{ folderPath: string }>,
+	res: Response
+): Promise<void> => {
 	try {
 		const { folderPath } = req.params;
 
@@ -233,7 +236,10 @@ export const deleteFolder = async (req: Request, res: Response): Promise<void> =
 	}
 };
 
-export const toggleFolderExclusion = async (req: Request, res: Response): Promise<void> => {
+export const toggleFolderExclusion = async (
+	req: Request<{ folderPath: string }>,
+	res: Response
+): Promise<void> => {
 	try {
 		const { folderPath } = req.params;
 		const { excluded } = req.body;

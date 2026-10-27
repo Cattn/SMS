@@ -1,11 +1,11 @@
 <script lang="ts">
-	import '$lib/polyfills';
+	import '#lib/polyfills.js';
 	import '../app.css';
 	import '../main.css';
 
-	import SideBar from '$lib/components/SideBar.svelte';
-	import { configState, initializeConfig } from '$lib/config.svelte';
-	import { getCurrentScheme, getIsDark, initializeTheme } from '$lib/theme/store.svelte';
+	import SideBar from '#lib/components/SideBar.svelte';
+	import { configState, initializeConfig } from '#lib/config.svelte.js';
+	import { getCurrentScheme, getIsDark, initializeTheme } from '#lib/theme/store.svelte.js';
 	import { HDRRouter, setHdrEnabled, isHdrEnabled } from '@cattn/hdr';
 
 	let { children, data } = $props();

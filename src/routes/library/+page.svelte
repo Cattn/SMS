@@ -2,7 +2,7 @@
 	import type { PageProps } from './$types';
 	import { page } from '$app/state';
 	import { Button, Snackbar, ConnectedButtons, TogglePrimitive, Chip } from 'm3-svelte';
-	import { configState } from '$lib/config.svelte';
+	import { configState } from '#lib/config.svelte.js';
 	import { enhance } from '$app/forms';
 	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 

@@ -1,8 +1,8 @@
 <script lang="ts">
 	import { Button, Switch, Snackbar } from 'm3-svelte';
-	import { configState, updateConfig } from '$lib/config.svelte';
-	import { setDarkMode, getIsDark, getSourceColor, setThemeFromSourceColor } from '$lib/theme/store.svelte';
-	import ThemeGenerator from '$lib/components/ThemeGenerator.svelte';
+	import { configState, updateConfig } from '#lib/config.svelte.js';
+	import { setDarkMode, getIsDark, getSourceColor, setThemeFromSourceColor } from '#lib/theme/store.svelte.js';
+	import ThemeGenerator from '#lib/components/ThemeGenerator.svelte';
 	import { hdrifyBackground, hdrify, setHdrEnabled, isHdrEnabled } from '@cattn/hdr';
 	
 	let snackbar: ReturnType<typeof Snackbar>;

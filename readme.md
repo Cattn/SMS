@@ -58,7 +58,7 @@ The application will be available at `http://localhost:1337`
 ## Environment Setup
 
 **Prerequisites**
-- Node.js 18+ and npm
+- Node.js 22.17+ and npm (Node.js 24 LTS recommended; also used by Docker)
 
 **Network Access**
 - Frontend runs on port `1337`

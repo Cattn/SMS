@@ -2,7 +2,10 @@ import { Request, Response } from 'express';
 import path from 'path';
 import fs from 'fs';
 
-export const deleteFile = async (req: Request, res: Response): Promise<void> => {
+export const deleteFile = async (
+	req: Request<{ filename: string }>,
+	res: Response
+): Promise<void> => {
 	try {
 		const filename = req.params.filename;
 

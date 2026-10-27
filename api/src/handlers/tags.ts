@@ -72,7 +72,7 @@ export const createTag = async (req: Request, res: Response): Promise<void> => {
 	}
 };
 
-export const deleteTag = async (req: Request, res: Response): Promise<void> => {
+export const deleteTag = async (req: Request<{ tagId: string }>, res: Response): Promise<void> => {
 	try {
 		const { tagId } = req.params;
 
@@ -95,7 +95,7 @@ export const deleteTag = async (req: Request, res: Response): Promise<void> => {
 	}
 };
 
-export const addTagToFile = async (req: Request, res: Response): Promise<void> => {
+export const addTagToFile = async (req: Request<{ filePath: string }>, res: Response): Promise<void> => {
 	try {
 		const { filePath } = req.params;
 		const { tagId } = req.body;
@@ -145,7 +145,7 @@ export const addTagToFile = async (req: Request, res: Response): Promise<void> =
 	}
 };
 
-export const removeTagFromFile = async (req: Request, res: Response): Promise<void> => {
+export const removeTagFromFile = async (req: Request<{ filePath: string; tagId: string }>, res: Response): Promise<void> => {
 	try {
 		const { filePath, tagId } = req.params;
 
@@ -168,7 +168,7 @@ export const removeTagFromFile = async (req: Request, res: Response): Promise<vo
 	}
 };
 
-export const addTagToFolder = async (req: Request, res: Response): Promise<void> => {
+export const addTagToFolder = async (req: Request<{ folderPath: string }>, res: Response): Promise<void> => {
 	try {
 		const { folderPath } = req.params;
 		const { tagId } = req.body;
@@ -213,7 +213,7 @@ export const addTagToFolder = async (req: Request, res: Response): Promise<void>
 	}
 };
 
-export const removeTagFromFolder = async (req: Request, res: Response): Promise<void> => {
+export const removeTagFromFolder = async (req: Request<{ folderPath: string; tagId: string }>, res: Response): Promise<void> => {
 	try {
 		const { folderPath, tagId } = req.params;
 
@@ -236,7 +236,7 @@ export const removeTagFromFolder = async (req: Request, res: Response): Promise<
 	}
 };
 
-export const getFileTags = async (req: Request, res: Response): Promise<void> => {
+export const getFileTags = async (req: Request<{ filePath: string }>, res: Response): Promise<void> => {
 	try {
 		const { filePath } = req.params;
 
@@ -266,7 +266,7 @@ export const getFileTags = async (req: Request, res: Response): Promise<void> =>
 	}
 };
 
-export const getFolderTags = async (req: Request, res: Response): Promise<void> => {
+export const getFolderTags = async (req: Request<{ folderPath: string }>, res: Response): Promise<void> => {
 	try {
 		const { folderPath } = req.params;
 
