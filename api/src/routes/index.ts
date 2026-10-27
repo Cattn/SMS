@@ -3,6 +3,7 @@ import { Router } from 'express';
 const router = Router();
 
 import { uploadFile } from '../handlers/file';
+import { createUpload, getUploadStatus, appendUpload } from '../handlers/resumable';
 import { deleteFile } from '../handlers/delete';
 import { getFile, getFiles, getFilesInPath, getFileExpiration } from '../handlers/get';
 import { getUploadProgress } from '../handlers/progress';
@@ -28,6 +29,9 @@ import {
 } from '../handlers/tags';
 
 router.post('/upload', uploadFile);
+router.post('/uploads', createUpload);
+router.get('/uploads/:id', getUploadStatus);
+router.patch('/uploads/:id', appendUpload);
 router.get('/delete/:filename', deleteFile);
 router.get('/getFiles', getFiles);
 router.get('/getFilesInPath', getFilesInPath);

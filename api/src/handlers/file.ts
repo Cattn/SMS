@@ -4,8 +4,20 @@ import { progressStore } from '../services/progressStore';
 import { DeletionManager } from '../services/timer';
 import fs from 'fs';
 import Busboy from 'busboy';
+import crypto from 'crypto';
+import { once } from 'events';
 
-function parseDuration(duration: string): Date {
+export async function moveFile(from: string, to: string) {
+	try {
+		await fs.promises.rename(from, to);
+	} catch (error) {
+		if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
+		await fs.promises.copyFile(from, to);
+		await fs.promises.rm(from);
+	}
+}
+
+export function parseDuration(duration: string): Date {
 	const match = duration.match(/^(\d+)([smhdw])$/);
 	if (!match) {
 		throw new Error('Invalid duration format. Use format like "1h", "30m", "1d"');
@@ -31,7 +43,7 @@ function parseDuration(duration: string): Date {
 	}
 }
 
-function normalizeUploadPath(uploadPath: string): string {
+export function normalizeUploadPath(uploadPath: string): string {
 	if (!uploadPath || uploadPath.trim() === '') {
 		return '';
 	}
@@ -49,7 +61,7 @@ function normalizeUploadPath(uploadPath: string): string {
 	return normalized;
 }
 
-function validateUploadPath(uploadPath: string): string | null {
+export function validateUploadPath(uploadPath: string): string | null {
 	if (!uploadPath) return null;
 
 	const invalidChars = /[<>:"/\\|?*]/;
@@ -136,7 +148,9 @@ export const uploadFile = (req: Request, res: Response): void => {
 	});
 
 	let filename = '';
-	const fileBuffers: Buffer[] = [];
+	let fileStream: fs.WriteStream | null = null;
+	const tempDir = path.join(process.cwd(), 'data', 'partial');
+	const tempPath = path.join(tempDir, `${crypto.randomUUID()}.tmp`);
 	const uploadsDir = path.join(process.cwd(), '../uploads');
 	if (!fs.existsSync(uploadsDir)) {
 		fs.mkdirSync(uploadsDir, { recursive: true });
@@ -161,11 +175,10 @@ export const uploadFile = (req: Request, res: Response): void => {
 	});
 
 	busboy.on('file', (fieldname, file, info) => {
-		filename = info.filename || 'uploaded_file';
-
-		file.on('data', (chunk: Buffer) => {
-			fileBuffers.push(chunk);
-		});
+		filename = path.basename(info.filename || 'uploaded_file');
+		fs.mkdirSync(tempDir, { recursive: true });
+		fileStream = fs.createWriteStream(tempPath);
+		file.pipe(fileStream);
 
 		file.on('end', () => {
 			if (uploadToken) {
@@ -176,6 +189,11 @@ export const uploadFile = (req: Request, res: Response): void => {
 
 	busboy.on('finish', async () => {
 		try {
+			if (!fileStream) {
+				return res.status(400).json({ error: 'No file provided' });
+			}
+			if (!fileStream.closed) await once(fileStream, 'close');
+
 			if (uploadPath) {
 				const validationError = validateUploadPath(uploadPath);
 				if (validationError) {
@@ -204,8 +222,7 @@ export const uploadFile = (req: Request, res: Response): void => {
 			}
 
 			const finalUploadPath = path.join(targetDir, filename);
-			const fileBuffer = Buffer.concat(fileBuffers);
-			fs.writeFileSync(finalUploadPath, fileBuffer);
+			await moveFile(tempPath, finalUploadPath);
 			console.log('File written to:', finalUploadPath);
 
 			if (uploadToken) {
@@ -256,11 +273,15 @@ export const uploadFile = (req: Request, res: Response): void => {
 					? (error as { message: string }).message
 					: 'Upload failed';
 			res.status(500).json({ error: 'Upload failed', details: message });
+		} finally {
+			fs.rmSync(tempPath, { force: true });
 		}
 	});
 
 	busboy.on('error', (err: unknown) => {
 		console.error('Busboy error:', err);
+		fileStream?.destroy();
+		fs.rmSync(tempPath, { force: true });
 		if (uploadToken) {
 			progressStore.setProgress(uploadToken, -1);
 		}

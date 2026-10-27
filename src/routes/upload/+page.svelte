@@ -1,17 +1,39 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button } from 'm3-svelte';
+	import { Button, LinearProgress } from 'm3-svelte';
 	import { onDestroy } from 'svelte';
 	import { configState } from '#lib/config.svelte.js';
+	import { resumableUpload, type UploadProgress } from '#lib/resumableUpload.js';
 	import { hdrifyBackground } from '@cattn/hdr';
 
 	let files = $state<FileList | undefined>();
-	let uploadProgress = $state(0);
+	let progress = $state<UploadProgress | null>(null);
 	let isUploading = $state(false);
 	let uploadError = $state('');
-	let uploadRequest: XMLHttpRequest | null = null;
+	let uploadController: AbortController | null = null;
 
-	onDestroy(() => uploadRequest?.abort());
+	onDestroy(() => uploadController?.abort());
+
+	const percent = $derived(
+		progress && progress.total > 0 ? (progress.loaded / progress.total) * 100 : 0
+	);
+
+	function formatBytes(bytes: number) {
+		const units = ['B', 'KB', 'MB', 'GB', 'TB'];
+		let i = 0;
+		while (bytes >= 1024 && i < units.length - 1) {
+			bytes /= 1024;
+			i++;
+		}
+		return `${bytes.toFixed(i === 0 || bytes >= 100 ? 0 : 1)} ${units[i]}`;
+	}
+
+	function formatEta(seconds: number) {
+		if (seconds < 60) return `${Math.ceil(seconds)}s`;
+		const minutes = Math.floor(seconds / 60);
+		if (minutes < 60) return `${minutes}m ${Math.round(seconds % 60)}s`;
+		return `${Math.floor(minutes / 60)}h ${minutes % 60}m`;
+	}
 
 	let enableCopy = $state(configState.upload.autoCopyLinks);
 
@@ -25,10 +47,6 @@
 	let expirationDateTime = $state('');
 
 	let selectedFileName = $derived.by(() => (files && files.length > 0 ? files[0].name : null));
-
-	function generateUploadToken(): string {
-		return `upload_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-	}
 
 	function getMinDateTime(): string {
 		const now = new Date();
@@ -54,6 +72,39 @@
 
 		pathSegments.push(encodedFileName);
 		return `${base}/${pathSegments.join('/')}`;
+	}
+
+	async function startUpload(file: File) {
+		uploadError = '';
+		progress = null;
+		isUploading = true;
+		uploadController = new AbortController();
+
+		try {
+			await resumableUpload(
+				file,
+				{
+					uploadPath: enablePath ? uploadPath.trim() || undefined : undefined,
+					expiresIn:
+						enableExpiration && expirationMode === 'duration' ? expirationDuration : undefined,
+					expiresAt:
+						enableExpiration && expirationMode === 'datetime' && expirationDateTime
+							? new Date(expirationDateTime).toISOString()
+							: undefined
+				},
+				(update) => (progress = update),
+				uploadController.signal
+			);
+			if (enableCopy) copyToClipboard(getLink(file.name));
+		} catch (error) {
+			if (!uploadController.signal.aborted) {
+				console.error('Upload failed:', error);
+				uploadError = error instanceof Error ? error.message : 'Upload failed. Please try again.';
+			}
+		} finally {
+			isUploading = false;
+			uploadController = null;
+		}
 	}
 
 	async function copyToClipboard(text: string) {
@@ -94,85 +145,7 @@
 		use:enhance={({ cancel }) => {
 			cancel();
 			if (isUploading || !files?.length) return;
-
-			uploadError = '';
-			uploadProgress = 0;
-			isUploading = true;
-			const uploadToken = generateUploadToken();
-
-			const uploadFormData = new FormData();
-			uploadFormData.append('uploadToken', uploadToken);
-			if (files && files.length > 0) {
-				uploadFormData.append('fileSize', files[0].size.toString());
-				uploadFormData.append('file', files[0]);
-			}
-
-			if (enablePath && uploadPath.trim()) {
-				uploadFormData.append('uploadPath', uploadPath.trim());
-			}
-
-			if (enableExpiration) {
-				if (expirationMode === 'duration') {
-					uploadFormData.append('expiresIn', expirationDuration);
-				} else if (expirationDateTime) {
-					uploadFormData.append('expiresAt', new Date(expirationDateTime).toISOString());
-				}
-			}
-
-			const xhr = new XMLHttpRequest();
-			uploadRequest = xhr;
-			xhr.open('POST', '/api/upload');
-
-			xhr.upload.onprogress = (event) => {
-				if (event.lengthComputable) {
-					uploadProgress = Math.min(99, (event.loaded / event.total) * 100);
-				}
-			};
-
-			xhr.onloadend = () => {
-				isUploading = false;
-				uploadRequest = null;
-			};
-
-			xhr.onload = () => {
-				if (xhr.status !== 200) {
-					console.error('Upload failed:', xhr.responseText);
-					uploadError = 'Upload failed. Please try again.';
-					try {
-						uploadError = JSON.parse(xhr.responseText).error || uploadError;
-					} catch {
-						void 0;
-					}
-				} else {
-					uploadProgress = 100;
-					try {
-						const response = JSON.parse(xhr.responseText);
-						if (response.expiresAt) {
-							const expiresDate = new Date(response.expiresAt);
-							console.log(`File will expire at: ${expiresDate.toLocaleString()}`);
-						}
-
-						if (enableCopy && files && files.length > 0) {
-							const link = getLink(files[0].name);
-							copyToClipboard(link);
-						}
-					} catch (e) {
-						console.log('Upload successful');
-
-						if (enableCopy && files && files.length > 0) {
-							const link = getLink(files[0].name);
-							copyToClipboard(link);
-						}
-					}
-				}
-			};
-
-			xhr.onerror = () => {
-				console.error('Upload error');
-				uploadError = 'Unable to reach the server. Please try again.';
-			};
-
-			xhr.send(uploadFormData);
+			startUpload(files[0]);
 		}}
 	>
 		<input id="file" type="file" name="file" style="display: none;" bind:files />
@@ -317,24 +290,42 @@
 		</div>
 
 		{#if isUploading}
-			<div class="mt-4 md:mt-2"></div>
-			<progress class="w-full" max="100" value={uploadProgress} aria-label="Upload progress"
-			></progress>
-			<p class="mt-2 text-sm text-gray-600">{Math.round(uploadProgress)}% uploaded</p>
+			<div class="w-full space-y-2" aria-live="polite">
+				<LinearProgress {percent} />
+				<div class="text-on-surface-variant flex justify-between gap-4 text-xs tabular-nums">
+					<span>
+						{Math.floor(percent)}% · {formatBytes(progress?.loaded ?? 0)} of {formatBytes(
+							progress?.total ?? files?.[0]?.size ?? 0
+						)}
+					</span>
+					<span>
+						{#if progress?.reconnecting}
+							Reconnecting…
+						{:else if progress?.speed}
+							{formatBytes(progress.speed)}/s{progress.eta !== null
+								? ` · ${formatEta(progress.eta)} left`
+								: ''}
+						{:else}
+							Starting…
+						{/if}
+					</span>
+				</div>
+			</div>
 		{/if}
 
 		{#if uploadError}
 			<p role="alert" class="text-error text-sm">{uploadError}</p>
 		{/if}
 
-		<Button
-			square
-			variant="filled"
-			type="submit"
-			disabled={isUploading || !files || files.length === 0}
-		>
-			{isUploading ? 'Uploading...' : 'Upload'}
-		</Button>
+		{#if isUploading}
+			<Button square variant="tonal" type="button" onclick={() => uploadController?.abort()}>
+				Cancel
+			</Button>
+		{:else}
+			<Button square variant="filled" type="submit" disabled={!files || files.length === 0}>
+				Upload
+			</Button>
+		{/if}
 	</form>
 </div>
 
