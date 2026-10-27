@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
 	import { Button, WavyLinearProgress } from 'm3-svelte';
-	import { configState } from '$lib/config.svelte';
+	import { configState } from '#lib/config.svelte.js';
 	import { hdrifyBackground } from '@cattn/hdr';
 
 	let files = $state<FileList | undefined>();

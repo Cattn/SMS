@@ -1,8 +1,8 @@
 import type { M3Theme, ColorScheme } from './types';
 import { generateM3Theme, type SchemeType } from './generator';
 import { removeAlphaFromHex } from './converter';
-import { browser } from '$app/environment';
-import { configState, updateThemeConfig } from '$lib/config.svelte';
+import { browser } from '$app/env';
+import { configState, updateThemeConfig } from '#lib/config.svelte.js';
 
 const DEFAULT_SOURCE_COLOR = '#8f4a4c';
 

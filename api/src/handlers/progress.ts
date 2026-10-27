@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { progressStore } from '../services/progressStore';
 
-export const getUploadProgress = (req: Request, res: Response): void => {
+export const getUploadProgress = (req: Request<{ token: string }>, res: Response): void => {
 	const { token } = req.params;
 
 	if (!token) {

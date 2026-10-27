@@ -1,7 +1,7 @@
 <script lang="ts">
 	import { Button } from 'm3-svelte';
 	import { goto } from '$app/navigation';
-	import { configState } from '$lib/config.svelte';
+	import { configState } from '#lib/config.svelte.js';
 	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 </script>
 

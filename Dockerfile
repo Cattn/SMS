@@ -1,5 +1,5 @@
-# Use Node.js 18+ base image
-FROM node:18
+# Use an LTS runtime supported by SvelteKit 3
+FROM node:24
 
 # Set working directory
 WORKDIR /usr/src/app
@@ -11,7 +11,7 @@ RUN npm install -g concurrently
 COPY package*.json ./
 
 # Install dependencies
-RUN npm install
+RUN npm ci
 
 # Copy the rest of the application code
 COPY . .
@@ -23,4 +23,4 @@ RUN mkdir -p uploads && chmod 755 uploads
 EXPOSE 1337 5823
 
 # Start the application
-CMD ["npm", "run", "startall"] 
+CMD ["npm", "run", "startall"]

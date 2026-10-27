@@ -120,12 +120,15 @@ export const getFilesInPath = async (req: Request, res: Response): Promise<void>
 	}
 };
 
-export const getFile = async (req: Request, res: Response): Promise<void> => {
+export const getFile = async (req: Request<{ filename: string }>, res: Response): Promise<void> => {
 	const filePath = path.join(process.cwd(), '../uploads', req.params.filename);
 	res.sendFile(filePath);
 };
 
-export const getFileExpiration = async (req: Request, res: Response): Promise<void> => {
+export const getFileExpiration = async (
+	req: Request<{ filename: string }>,
+	res: Response
+): Promise<void> => {
 	try {
 		const filename = req.params.filename;
 

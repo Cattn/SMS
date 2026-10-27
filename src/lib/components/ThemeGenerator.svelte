@@ -1,7 +1,7 @@
 <script lang="ts">
 	import ColorPicker, { ChromeVariant } from 'svelte-awesome-color-picker';
-    import { generateM3Theme, type SchemeType } from '$lib/theme/generator';
-    import { getSourceColor, getSchemeType, setSchemeType } from '$lib/theme/store.svelte';
+    import { generateM3Theme, type SchemeType } from '#lib/theme/generator.js';
+    import { getSourceColor, getSchemeType, setSchemeType } from '#lib/theme/store.svelte.js';
 
     let { 
         initialHex = getSourceColor(),

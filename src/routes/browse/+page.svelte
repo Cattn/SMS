@@ -4,7 +4,7 @@
 	import { page } from '$app/state';
 	import { goto } from '$app/navigation';
 	import { enhance } from '$app/forms';
-	import { configState } from '$lib/config.svelte';
+	import { configState } from '#lib/config.svelte.js';
 	import { hdrifyBackground, hdrify } from '@cattn/hdr';
 
 	let { data }: { data: PageData } = $props();
@@ -128,7 +128,7 @@
 			if (response.ok) {
 				snackbar.show({ message: 'Folder created successfully', closable: true });
 				createFolderDialog = { open: false, folderName: '' };
-				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { invalidateAll: true });
+				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { refreshAll: true });
 			} else {
 				const error = await response.json();
 				snackbar.show({ message: error.error || 'Failed to create folder', closable: true });
@@ -158,7 +158,7 @@
 				snackbar.show({ message: 'Tag created successfully', closable: true });
 				createTagDialog = { open: false, tagName: '', tagColor: generateRandomColor() };
 				manageTagsDialog = { open: false };
-				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { invalidateAll: true });
+				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { refreshAll: true });
 			} else {
 				const error = await response.json();
 				snackbar.show({ message: error.error || 'Failed to create tag', closable: true });
@@ -252,7 +252,7 @@
 			if (response.ok) {
 				snackbar.show({ message: 'Tag deleted successfully', closable: true });
 				manageTagsDialog = { open: false };
-				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { invalidateAll: true });
+				goto(`/browse?path=${encodeURIComponent(currentPath)}`, { refreshAll: true });
 			} else {
 				const error = await response.json();
 				snackbar.show({ message: error.error || 'Failed to delete tag', closable: true });
