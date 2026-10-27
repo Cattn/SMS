@@ -90,6 +90,26 @@ export const actions: Actions = {
 		}
 	},
 
+	deleteFile: async ({ request, url }) => {
+		const data = await request.formData();
+		const filePath = data.get('filePath') as string;
+
+		try {
+			const response = await fetch(
+				'http://' + url.hostname + `:5823/api/delete/${encodeURIComponent(filePath)}`
+			);
+
+			if (!response.ok) {
+				const error = await response.json();
+				return fail(400, { error: error.error || 'Failed to delete file' });
+			}
+
+			return { success: true };
+		} catch {
+			return fail(500, { error: 'Error deleting file' });
+		}
+	},
+
 	createTag: async ({ request, url }) => {
 		const data = await request.formData();
 		const name = data.get('name') as string;
