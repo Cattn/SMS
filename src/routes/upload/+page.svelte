@@ -1,16 +1,17 @@
 <script lang="ts">
 	import { enhance } from '$app/forms';
-	import { Button, WavyLinearProgress } from 'm3-svelte';
+	import { Button } from 'm3-svelte';
+	import { onDestroy } from 'svelte';
 	import { configState } from '#lib/config.svelte.js';
 	import { hdrifyBackground } from '@cattn/hdr';
 
 	let files = $state<FileList | undefined>();
 	let uploadProgress = $state(0);
-	let targetProgress = $state(0);
 	let isUploading = $state(false);
-	let uploadToken = $state('');
-	let progressEventSource: EventSource | null = null;
-	let animationInterval: ReturnType<typeof setInterval> | null = null;
+	let uploadError = $state('');
+	let uploadRequest: XMLHttpRequest | null = null;
+
+	onDestroy(() => uploadRequest?.abort());
 
 	let enableCopy = $state(configState.upload.autoCopyLinks);
 
@@ -27,63 +28,6 @@
 
 	function generateUploadToken(): string {
 		return `upload_${Date.now()}_${Math.random().toString(36).substring(2)}`;
-	}
-
-	function animateProgress() {
-		if (animationInterval) clearInterval(animationInterval);
-
-		animationInterval = setInterval(() => {
-			const diff = targetProgress - uploadProgress;
-			if (Math.abs(diff) < 0.5) {
-				uploadProgress = targetProgress;
-				if (animationInterval) {
-					clearInterval(animationInterval);
-					animationInterval = null;
-				}
-			} else {
-				uploadProgress += diff * 0.1;
-			}
-		}, 50);
-	}
-
-	function startProgressTracking(token: string) {
-		progressEventSource?.close();
-		if (animationInterval) clearInterval(animationInterval);
-
-		uploadProgress = 0;
-		targetProgress = 0;
-		isUploading = true;
-
-		const apiUrl = `http://${window.location.hostname}:5823/api/upload-progress/${token}`;
-		progressEventSource = new EventSource(apiUrl);
-
-		progressEventSource.onmessage = (event) => {
-			const data = JSON.parse(event.data);
-			targetProgress = data.progress;
-			animateProgress();
-
-			if (data.progress >= 100) {
-				progressEventSource?.close();
-				progressEventSource = null;
-				setTimeout(() => {
-					isUploading = false;
-					if (animationInterval) {
-						clearInterval(animationInterval);
-						animationInterval = null;
-					}
-				}, 500);
-			}
-		};
-
-		progressEventSource.onerror = () => {
-			progressEventSource?.close();
-			progressEventSource = null;
-			isUploading = false;
-			if (animationInterval) {
-				clearInterval(animationInterval);
-				animationInterval = null;
-			}
-		};
 	}
 
 	function getMinDateTime(): string {
@@ -147,12 +91,14 @@
 		enctype="multipart/form-data"
 		method="POST"
 		class="button-mod flex w-full max-w-md flex-col items-center justify-center space-y-4 md:max-w-lg"
-		use:enhance={({ formData, cancel }) => {
-			uploadToken = generateUploadToken();
-
-			startProgressTracking(uploadToken);
-
+		use:enhance={({ cancel }) => {
 			cancel();
+			if (isUploading || !files?.length) return;
+
+			uploadError = '';
+			uploadProgress = 0;
+			isUploading = true;
+			const uploadToken = generateUploadToken();
 
 			const uploadFormData = new FormData();
 			uploadFormData.append('uploadToken', uploadToken);
@@ -174,15 +120,31 @@
 			}
 
 			const xhr = new XMLHttpRequest();
-			xhr.open('POST', `http://${window.location.hostname}:5823/api/upload`);
+			uploadRequest = xhr;
+			xhr.open('POST', '/api/upload');
+
+			xhr.upload.onprogress = (event) => {
+				if (event.lengthComputable) {
+					uploadProgress = Math.min(99, (event.loaded / event.total) * 100);
+				}
+			};
+
+			xhr.onloadend = () => {
+				isUploading = false;
+				uploadRequest = null;
+			};
 
 			xhr.onload = () => {
 				if (xhr.status !== 200) {
 					console.error('Upload failed:', xhr.responseText);
-					isUploading = false;
-					progressEventSource?.close();
-					progressEventSource = null;
+					uploadError = 'Upload failed. Please try again.';
+					try {
+						uploadError = JSON.parse(xhr.responseText).error || uploadError;
+					} catch {
+						void 0;
+					}
 				} else {
+					uploadProgress = 100;
 					try {
 						const response = JSON.parse(xhr.responseText);
 						if (response.expiresAt) {
@@ -207,9 +169,7 @@
 
 			xhr.onerror = () => {
 				console.error('Upload error');
-				isUploading = false;
-				progressEventSource?.close();
-				progressEventSource = null;
+				uploadError = 'Unable to reach the server. Please try again.';
 			};
 
 			xhr.send(uploadFormData);
@@ -358,8 +318,13 @@
 
 		{#if isUploading}
 			<div class="mt-4 md:mt-2"></div>
-			<WavyLinearProgress thickness={4} percent={uploadProgress} />
+			<progress class="w-full" max="100" value={uploadProgress} aria-label="Upload progress"
+			></progress>
 			<p class="mt-2 text-sm text-gray-600">{Math.round(uploadProgress)}% uploaded</p>
+		{/if}
+
+		{#if uploadError}
+			<p role="alert" class="text-error text-sm">{uploadError}</p>
 		{/if}
 
 		<Button
