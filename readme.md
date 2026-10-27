@@ -60,6 +60,28 @@ The application will be available at `http://localhost:1337`
 **Prerequisites**
 - Node.js 22.17+ and npm (Node.js 24 LTS recommended; also used by Docker)
 
+SQLite uses a native module. Installation checks that it can load and rebuilds it from
+source if needed, including on ARM64 systems whose glibc is older than the prebuilt
+binary requires. Source builds need Python, make, and a C++ compiler. On Debian/Ubuntu:
+
+```bash
+sudo apt install build-essential python3
+```
+
+If an existing installation fails with `GLIBC_2.38 not found`, `ERR_DLOPEN_FAILED`, or
+a missing SQLite binding, install those tools and run from the SMS directory:
+
+```bash
+npm run repair:sqlite
+npm run startall
+```
+
+For versions without the repair script, run
+`npm_config_build_from_source=true npm rebuild sqlite3 --foreground-scripts` instead.
+This recompiles the binding for the current system and preserves the database in `api/data`.
+The combined start commands stop both services if either service fails; check the `[1]`
+API startup output when port 5823 is unavailable.
+
 **Network Access**
 - Frontend runs on port `1337`
 - Backend API runs on port `5823`

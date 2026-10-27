@@ -7,6 +7,9 @@
 		"dev": "vite dev",
 		"build": "vite build",
 		"preview": "vite preview",
+		"postinstall": "node scripts/ensure-sqlite.mjs",
+		"repair:sqlite": "node scripts/ensure-sqlite.mjs --rebuild",
+		"test:sqlite": "node --test tests/ensure-sqlite.test.mjs",
 		"prepare": "svelte-kit sync || echo ''",
 		"check": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json",
 		"check:watch": "svelte-kit sync && svelte-check --tsconfig ./tsconfig.json --watch",
@@ -18,10 +21,10 @@
 		"Ldev:api": "npm run start:api",
 		"start": "npm run build && cross-env BODY_SIZE_LIMIT=Infinity node server.js",
 		"Lstart": "cross-env BODY_SIZE_LIMIT=Infinity node server.js",
-		"startall": "concurrently \"npm run start\" \"npm run dev:api\"",
-		"ncuStart": "concurrently \"npm run Lstart\" \"npm run dev:api\"",
-		"nsuStart": "concurrently \"npm run start\" \"npm run Ldev:api\"",
-		"nobStart": "concurrently \"npm run Lstart\" \"npm run Ldev:api\""
+		"startall": "concurrently --kill-others-on-fail \"npm run start\" \"npm run dev:api\"",
+		"ncuStart": "concurrently --kill-others-on-fail \"npm run Lstart\" \"npm run dev:api\"",
+		"nsuStart": "concurrently --kill-others-on-fail \"npm run start\" \"npm run Ldev:api\"",
+		"nobStart": "concurrently --kill-others-on-fail \"npm run Lstart\" \"npm run Ldev:api\""
 	},
 	"devDependencies": {
 		"@cattn/hdr": "^0.4.0",

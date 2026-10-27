@@ -9,6 +9,7 @@ RUN npm install -g concurrently
 
 # Copy package files
 COPY package*.json ./
+COPY scripts/ensure-sqlite.mjs ./scripts/ensure-sqlite.mjs
 
 # Install dependencies
 RUN npm ci
