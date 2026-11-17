@@ -56,7 +56,7 @@
 	},
 	"dependencies": {
 		"@ktibow/material-color-utilities-nightly": "^0.3.11755307340811",
-		"@sveltejs/adapter-node": "^6.0.0",
+		"@sveltejs/adapter-node": "^6.0.1",
 		"@types/express": "^5.0.3",
 		"@types/express-fileupload": "^1.5.1",
 		"busboy": "^1.6.0",
